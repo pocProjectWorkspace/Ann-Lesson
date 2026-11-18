@@ -40,7 +40,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
               ))}
             </nav>
           )}
-          {current ? <PdfViewer fileId={current.id} title={current.fileName} /> : <Empty>No PDF has been uploaded for this lesson yet.</Empty>}
+          {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} /> : <Empty>No PDF has been uploaded for this lesson yet.</Empty>}
         </div>
         <Card title="Who has read it" description={n ? `${confirmed} confirmed, ${learnt} marked learnt, ${opened} opened, of ${n}` : undefined} actions={pending > 0 ? <InlineAction action={confirmAllLearnt} hidden={{ lessonId: lesson.id }} label={`Confirm ${pending}`} variant="primary" /> : undefined}>
           {n > 0 && <ProgressBar value={(confirmed / n) * 100} className="mb-4" label="Confirmed share of class" />}

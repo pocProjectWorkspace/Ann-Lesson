@@ -7,9 +7,9 @@ import { readLocal, signedUrl } from "@/lib/storage";
  * Serves a lesson PDF to an authorised user.
  * - Super admin: any file.
  * - School admin: files in their school.
- * - Teacher: files in classes they teach.
- * - Student: files in lessons of their own class, view only (no download hint,
- *   no caching). Session validity is checked on every request, so a revoked
+ * - Teacher: files in classes they teach, view only.
+ * - Student: files in lessons of their own class, view only.
+ * Download (attachment) is available to school admins and the owner only. Session validity is checked on every request, so a revoked
  *   session stops working immediately.
  */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -43,8 +43,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // should never create) is served as an opaque download, and every response
   // carries a sandboxing CSP so same-origin active content cannot run.
   const isPdf = file.mimeType === "application/pdf";
-  const isStudent = session.role === "STUDENT";
-  const wantsDownload = !isStudent && req.nextUrl.searchParams.get("download") === "1";
+  // Only the people who manage content may save the file; teachers and students view only.
+  const canDownload = session.role === "SCHOOL_ADMIN" || session.role === "SUPER_ADMIN";
+  const wantsDownload = canDownload && req.nextUrl.searchParams.get("download") === "1";
   const disposition = !isPdf || wantsDownload ? "attachment" : "inline";
 
   const url = await signedUrl(file.storageKey, file.fileName, disposition);

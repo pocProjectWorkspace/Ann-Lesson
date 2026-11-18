@@ -33,8 +33,8 @@ function subscribe(cb: () => void) {
 
 /**
  * Lesson PDF viewer.
- * Staff get Book and Scroll modes plus a download link.
- * Students get the book only: no scroll view, no full-screen tab, and the
+ * School admins and the owner get Book and Scroll modes plus a download link.
+ * Teachers and students get the book only: no scroll view, no full-screen tab, and the
  * book is rendered from images with a name watermark, so the raw PDF is
  * never handed to the browser's own viewer. (Determined viewers can still
  * screenshot pages; this is deterrence, not DRM.)

@@ -154,10 +154,11 @@ web/
   rather than through a server action, so even a very large file is never held in memory.
   The PDF signature is checked in the browser and again on the server; a
   renamed file is refused.
-- **Student viewing.** Students get the book view only, rendered from images
-  with their name watermarked across each page, no scroll view, no download
-  link, and the file route never sends an attachment disposition to a student.
-  Staff can download. This deters sharing; it is not DRM.
+- **Viewing only for teachers and students.** Both get the book view only, rendered
+  from images with their name watermarked across each page, no scroll view, no
+  download link, and the file route never sends an attachment disposition to them.
+  Only school admins and the platform owner can download. This deters sharing; it is
+  not DRM.
 
 ## School administration features
 

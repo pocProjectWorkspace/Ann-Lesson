@@ -8,7 +8,7 @@ import { hashPassword, requireSchoolRole, revokeUserSessions, type Session } fro
 import { copyObject, deleteObject, makeKey } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import { assertWithinPlan, PlanLimitError } from "@/lib/plans";
-import { notifyUsers } from "@/lib/notify";
+import { notifyUsers, removeNotificationsFor } from "@/lib/notify";
 import { columnIndex, parseCsv } from "@/lib/csv";
 import { className } from "@/lib/data";
 import type { ActionState } from "@/lib/utils";
@@ -283,6 +283,7 @@ export async function deleteClass(formData: FormData) {
   const cls = await db.class.findFirst({ where: { id, schoolId: session.schoolId }, include: { subjects: { include: { lessons: { include: { files: true } } } } } });
   if (!cls) return;
   for (const s of cls.subjects) for (const l of s.lessons) for (const f of l.files) await deleteObject(f.storageKey);
+  await removeNotificationsFor({ classIds: [id], lessonIds: cls.subjects.flatMap((s) => s.lessons.map((l) => l.id)) });
   await db.class.delete({ where: { id } });
   await audit(session, { action: "class.delete", targetType: "Class", targetId: id, summary: `Deleted class ${className(cls)} with ${cls.subjects.length} subjects` });
   revalidatePath("/school/classes");
@@ -377,6 +378,7 @@ export async function deleteSubject(formData: FormData) {
   const subject = await db.subject.findFirst({ where: { id, schoolId: session.schoolId }, include: { lessons: { include: { files: true } } } });
   if (!subject) return;
   for (const l of subject.lessons) for (const f of l.files) await deleteObject(f.storageKey);
+  await removeNotificationsFor({ lessonIds: subject.lessons.map((l) => l.id) });
   await db.subject.delete({ where: { id } });
   await audit(session, { action: "subject.delete", targetType: "Subject", targetId: id, summary: `Deleted subject ${subject.name} with ${subject.lessons.length} lessons` });
   revalidatePath(`/school/classes/${subject.classId}`);
@@ -443,6 +445,7 @@ export async function deleteLesson(formData: FormData) {
   const lesson = await db.lesson.findFirst({ where: { id, schoolId: session.schoolId }, include: { files: true } });
   if (!lesson) return;
   for (const f of lesson.files) await deleteObject(f.storageKey);
+  await removeNotificationsFor({ lessonIds: [id] });
   await db.lesson.delete({ where: { id } });
   await audit(session, { action: "lesson.delete", targetType: "Lesson", targetId: id, summary: `Deleted lesson "${lesson.title}"` });
   revalidatePath(`/school/subjects/${lesson.subjectId}`);

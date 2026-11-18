@@ -25,7 +25,7 @@ export default async function EmbeddedViewer({ params, searchParams }: { params:
   const src = `/api/files/${file.id}${t ? `?t=${encodeURIComponent(t)}` : ""}`;
   return (
     <main className="min-h-screen bg-slate-900 p-2">
-      <Flipbook src={src} title={file.fileName} watermark={session.role === "STUDENT" ? session.name : undefined} />
+      <Flipbook src={src} title={file.fileName} watermark={session.role === "STUDENT" || session.role === "TEACHER" ? session.name : undefined} />
     </main>
   );
 }

@@ -49,11 +49,12 @@ describe("tenant isolation", () => {
     expect((await api("/api/exports/students.csv", { token: gStudent })).status).toBe(403);
     expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/learnt`, { method: "POST", token: gTeacher, body: JSON.stringify({ learnt: true }) })).status).toBe(403);
   });
-  it("students never get a download disposition for PDFs", async () => {
+  it("students and teachers never get a download disposition for PDFs", async () => {
     const r = await api(`/api/files/${greenwoodLesson.files[0].id}?download=1`, { token: gStudent });
     expect(r.status).toBe(200);
     expect(r.headers.get("content-disposition")).toMatch(/^inline/);
     const t = await api(`/api/files/${greenwoodLesson.files[0].id}?download=1`, { token: gTeacher });
-    expect(t.headers.get("content-disposition")).toMatch(/^attachment/);
+    expect(t.status).toBe(200);
+    expect(t.headers.get("content-disposition")).toMatch(/^inline/);
   });
 });

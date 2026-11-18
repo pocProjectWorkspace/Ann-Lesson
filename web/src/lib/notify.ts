@@ -23,6 +23,19 @@ export async function notifyLessonPublished(lessonId: string) {
   ]);
 }
 
+/**
+ * Remove notifications that point at lessons or classes which no longer exist,
+ * so nobody taps through to a 404. Call before deleting the rows themselves.
+ */
+export async function removeNotificationsFor(target: { lessonIds?: string[]; classIds?: string[] }) {
+  const hrefs = [
+    ...(target.lessonIds ?? []).flatMap((id) => [`/student/lessons/${id}`, `/teacher/lessons/${id}`]),
+    ...(target.classIds ?? []).flatMap((id) => [`/teacher/classes/${id}`, `/school/classes/${id}`]),
+  ];
+  if (hrefs.length === 0) return;
+  await db.notification.deleteMany({ where: { href: { in: hrefs } } });
+}
+
 export async function unreadCount(userId: string) {
   return db.notification.count({ where: { userId, readAt: null } });
 }

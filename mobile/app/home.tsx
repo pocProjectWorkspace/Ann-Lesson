@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import { api, ApiError } from "../lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCached } from "../lib/use-cached";
 import { Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, SpineCard, Subtitle, Title, colors, palette, setAccent } from "../lib/ui";
@@ -18,11 +18,11 @@ export default function HomeScreen() {
   const { data, error, offline, cachedAt, refreshing, refresh, reload } = useCached(
     "home",
     async () => {
-      if (!ready || !user) throw new ApiError(0, "Signing in…"); // not yet; a reload follows once auth is ready
       const [home, n] = await Promise.all([api.home(), api.notifications().catch(() => ({ unread: 0 }))]);
       return { home, unread: n.unread };
     },
-    [ready, !!user],
+    [],
+    { enabled: ready && !!user },
   );
   const home = data?.home;
   const unread = data?.unread ?? 0;

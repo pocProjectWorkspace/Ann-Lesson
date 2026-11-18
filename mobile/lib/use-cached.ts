@@ -6,8 +6,11 @@ import { cacheGet, cacheSet } from "./storage";
  * Load data from the API and keep the last successful result in the on-device
  * cache. When the network fails, the cached copy is shown with an "offline"
  * flag so the screen still works without a connection.
+ * Pass `enabled: false` to hold off (for example until the session is restored);
+ * nothing is fetched and no error is shown until it becomes true.
  */
-export function useCached<T>(key: string, fetcher: () => Promise<T>, deps: unknown[] = []) {
+export function useCached<T>(key: string, fetcher: () => Promise<T>, deps: unknown[] = [], options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true;
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
@@ -16,6 +19,7 @@ export function useCached<T>(key: string, fetcher: () => Promise<T>, deps: unkno
   const alive = useRef(true);
 
   const load = useCallback(async () => {
+    if (!enabled) return;
     try {
       setError(null);
       const fresh = await fetcher();
@@ -40,7 +44,7 @@ export function useCached<T>(key: string, fetcher: () => Promise<T>, deps: unkno
       if (alive.current) setRefreshing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, ...deps]);
+  }, [key, enabled, ...deps]);
 
   useEffect(() => {
     alive.current = true;

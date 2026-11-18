@@ -43,7 +43,8 @@ jobs:
       - run: npm run build
       - name: Start server and run API tests
         run: |
-          (npm start &) && npx wait-on http://localhost:3000/api/health -t 60000
+          cp -r public .next/standalone/public && cp -r .next/static .next/standalone/.next/static
+          (node .next/standalone/server.js &) && npx wait-on http://localhost:3000/api/health -t 60000
           npm run test:api
   mobile:
     runs-on: ubuntu-latest
