@@ -21,3 +21,5 @@ mobile/dist/
 .claude/
 mobile/.claude/
 web/.claude/
+# never keep the dev server log inside the tree: Turbopack would watch it and rebuild in a loop
+dev.log

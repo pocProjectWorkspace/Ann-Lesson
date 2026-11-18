@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Field, Input } from "./ui";
 
+const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 250) || 250;
+
 /**
  * Uploads PDFs straight to /api/uploads/lesson-file with a progress bar.
  * Files are checked for the PDF signature in the browser before sending, and
@@ -52,7 +54,7 @@ export function LessonUploadForm({ lessonId }: { lessonId: string }) {
     const problems: string[] = [];
     for (const file of files) {
       try {
-        if (file.size > 40 * 1024 * 1024) throw new Error(`${file.name} is larger than 40 MB`);
+        if (file.size > MAX_MB * 1024 * 1024) throw new Error(`${file.name} is larger than ${MAX_MB} MB`);
         if (!(await isPdf(file))) throw new Error(`${file.name} is not a valid PDF file`);
         await put(file);
         saved++;
@@ -70,7 +72,7 @@ export function LessonUploadForm({ lessonId }: { lessonId: string }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {message && <Alert kind={message.kind}>{message.text}</Alert>}
-      <Field label="PDF file(s)" hint="PDF only, up to 40 MB each. You can select several.">
+      <Field label="PDF file(s)" hint={`PDF only, up to ${MAX_MB} MB each. You can select several. Large files take a moment to upload and to open as a book.`}>
         <Input ref={inputRef} name="files" type="file" accept="application/pdf,.pdf" multiple required disabled={busy} />
       </Field>
       {progress && (

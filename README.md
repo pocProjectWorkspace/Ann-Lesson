@@ -111,6 +111,7 @@ Student password `Learn1234`, teacher password `Teach1234`. All seeds skip what 
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the token API from a browser, e.g. `https://m.example.com` |
 | `ERROR_WEBHOOK_URL` | Optional webhook that receives a JSON payload for every server error |
 | `PUSH_ENABLED`, `EXPO_ACCESS_TOKEN` | Set `PUSH_ENABLED=0` to disable push; the access token is optional |
+| `MAX_UPLOAD_MB`, `NEXT_PUBLIC_MAX_UPLOAD_MB` | Largest PDF a school may upload, default 250. Set both to the same value |
 | `STORAGE_DRIVER` | `local` or `s3` |
 | `UPLOAD_DIR` | Folder for local storage (default `./uploads`) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 settings when `STORAGE_DRIVER=s3`. `S3_ENDPOINT` is only needed for non-AWS providers |
@@ -150,7 +151,7 @@ web/
 - **Password change.** Every role can change their own password at `/account`
   (mobile: `POST /api/mobile/password`). Changing it signs out other devices.
 - **Uploads.** PDFs stream to storage through `PUT /api/uploads/lesson-file`
-  rather than through a server action, so a 40 MB file is never held in memory.
+  rather than through a server action, so even a very large file is never held in memory.
   The PDF signature is checked in the browser and again on the server; a
   renamed file is refused.
 - **Student viewing.** Students get the book view only, rendered from images
