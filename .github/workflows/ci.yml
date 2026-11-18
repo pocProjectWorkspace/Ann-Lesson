@@ -27,6 +27,8 @@ jobs:
       SUPER_ADMIN_EMAIL: owner@example.com
       SUPER_ADMIN_PASSWORD: ChangeMe123!
       PUSH_ENABLED: "0"
+      # The production build only allows listed origins; the CORS test uses this one.
+      CORS_ORIGINS: http://localhost:3100
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
