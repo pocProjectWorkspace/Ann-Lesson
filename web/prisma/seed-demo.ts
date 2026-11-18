@@ -3,6 +3,8 @@
  * Adds three kindergarten classes to each active school (Nursery, LKG, UKG), each with the usual
  * subjects and no lessons yet, plus teachers and a few students. Lesson content is added by the
  * school through the web app (or with scripts/make-lesson-pdf.mjs for generated samples).
+ * On an empty database it first creates two demo schools (GREENWOOD, RIVERSIDE) with an
+ * "admin" user each, so a fresh install or CI can be seeded in one go.
  * Safe to run again: it skips anything that already exists.
  *
  * Usage: npx tsx prisma/seed-demo.ts            (all active schools)
@@ -14,6 +16,13 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 const PASSWORD = "Learn1234";
 const TEACHER_PASSWORD = "Teach1234";
+const ADMIN_PASSWORD = "Welcome123";
+
+/** Demo schools created when the database has none yet (fresh install, CI). */
+const DEMO_SCHOOLS = [
+  { name: "Greenwood High School", code: "GREENWOOD", plan: "PRO", maxStudents: 500, maxTeachers: 40, maxStorageMb: 100 * 1024, adminName: "Priya Menon" },
+  { name: "Riverside Academy", code: "RIVERSIDE", plan: "BASIC", maxStudents: 500, maxTeachers: 40, maxStorageMb: 25 * 1024, adminName: "John Mathew" },
+];
 
 export const KG_SUBJECTS = ["English", "Numbers", "General Awareness", "Rhymes & Stories", "Art & Craft"];
 
@@ -57,8 +66,26 @@ export const KG_CLASSES: ClassSpec[] = [
 
 async function main() {
   const onlyCode = process.argv[2]?.toUpperCase();
+  if (!onlyCode && (await prisma.school.count()) === 0) {
+    const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    for (const d of DEMO_SCHOOLS) {
+      await prisma.school.create({
+        data: {
+          name: d.name,
+          code: d.code,
+          plan: d.plan,
+          planExpiresAt: new Date(Date.now() + 365 * 86_400_000),
+          maxStudents: d.maxStudents,
+          maxTeachers: d.maxTeachers,
+          maxStorageMb: d.maxStorageMb,
+          users: { create: { role: "SCHOOL_ADMIN", name: d.adminName, username: "admin", passwordHash: adminHash } },
+        },
+      });
+      console.log(`Created demo school ${d.name} (${d.code}) with admin "admin"`);
+    }
+  }
   const schools = await prisma.school.findMany({ where: { isActive: true, ...(onlyCode ? { code: onlyCode } : {}) }, orderBy: { createdAt: "asc" } });
-  if (schools.length === 0) throw new Error(onlyCode ? `School ${onlyCode} not found` : "No schools found. Create one as the platform owner first.");
+  if (schools.length === 0) throw new Error(`School ${onlyCode} not found`);
 
   const studentHash = await bcrypt.hash(PASSWORD, 10);
   const teacherHash = await bcrypt.hash(TEACHER_PASSWORD, 10);
