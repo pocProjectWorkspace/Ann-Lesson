@@ -115,7 +115,7 @@ Student password `Learn1234`, teacher password `Teach1234`. All seeds skip what 
 | `MAX_UPLOAD_MB`, `NEXT_PUBLIC_MAX_UPLOAD_MB` | Largest PDF a school may upload, default 500. Set both to the same value |
 | `STORAGE_DRIVER` | `local` or `s3` |
 | `UPLOAD_DIR` | Folder for local storage (default `./uploads`) |
-| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 settings when `STORAGE_DRIVER=s3`. `S3_ENDPOINT` is only needed for non-AWS providers |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 settings when `STORAGE_DRIVER=s3`. `S3_ENDPOINT` is only needed for non-AWS providers such as Cloudflare R2 (`S3_REGION=auto`). The bucket needs a CORS rule allowing `GET`/`HEAD` from the app origin, because the browser downloads PDFs from the bucket directly; see `docs/DEPLOY-RAILWAY.md` |
 | `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` | Used once by the seed script |
 
 ## Project layout
@@ -226,6 +226,12 @@ view-before-learnt rule, teacher confirmation, notifications and password change
 It expects the demo data (`npm run db:seed && npm run seed:demo`). CI runs all of
 this plus a Docker build on every push; see `.github/workflows/ci.yml`.
 
+## Deploy on Railway + Cloudflare R2 (recommended)
+
+The cheapest managed setup: the app and Postgres on Railway, PDFs in R2 so
+downloads are free. Step by step in [docs/DEPLOY-RAILWAY.md](docs/DEPLOY-RAILWAY.md),
+including the R2 CORS rule the book viewer needs.
+
 ## Deploy with Docker
 
 The web app ships as a single container (Next.js standalone, Node 22, non-root
@@ -261,4 +267,4 @@ PostgreSQL if you prefer not to run the `db` service.
 
 ## Troubleshooting
 
-- **Every page reloads once a second in development.** The Turbopack cache in `web/.next` is stale, usually after a change to `next.config.ts`. Stop the server, delete `web/.next`, start again.
+- **Every page reloads once a second in development.** A stale Turbopack cache in `web/.next`. The persisted dev cache is turned off in `next.config.ts` for this reason; if it ever happens anyway, stop the server, delete `web/.next`, start again.

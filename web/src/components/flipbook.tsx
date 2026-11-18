@@ -40,7 +40,10 @@ export function Flipbook({ src, title, watermark }: { src: string; title: string
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        const task = pdfjs.getDocument({ url: src, withCredentials: true });
+        // Same-origin credentials: the session cookie still reaches /api/files, and when that
+        // route redirects to a signed R2/S3 URL the cross-origin request is sent without
+        // credentials, which is what bucket CORS rules can answer.
+        const task = pdfjs.getDocument({ url: src, withCredentials: false });
         const doc = await task.promise;
         const total = doc.numPages;
         setStatus({ kind: "loading", done: 0, total });

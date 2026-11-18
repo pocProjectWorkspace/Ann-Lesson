@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
   experimental: {
+    // Off because the persisted dev cache goes stale whenever next.config.ts or an
+    // environment variable changes, and every page then reloads in a loop until
+    // .next is deleted. Cold starts are a few seconds slower; nothing else changes.
+    turbopackFileSystemCacheForDev: false,
     proxyClientMaxBodySize: `${uploadCapMb + 50}mb`,
     serverActions: {
       // Files no longer pass through server actions, so the default-sized body is enough.
