@@ -204,6 +204,14 @@ colour contrast on both the paper and dark surfaces. Re-run an audit locally by 
 `node_modules/axe-core/axe.min.js` at `web/public/dev-axe.js` (git-ignored) and running
 `axe.run()` from the browser console.
 
+## Security headers
+
+Every response carries HSTS, `nosniff`, a referrer policy and a permissions policy.
+Pages send `frame-ancestors 'self'`, so no other site can frame them. The embedded
+book viewer (`/embed/*`) additionally allows the origins in `CORS_ORIGINS`, which is
+where a separately hosted mobile web build lives; in development local origins are
+allowed automatically. PDF responses keep their own sandboxing policy.
+
 ## Tenant isolation
 
 Every school-scoped table carries `schoolId`. Every query in the school, teacher
