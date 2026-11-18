@@ -1,0 +1,79 @@
+# Production-style stack: PostgreSQL + the web app, with uploads on a volume.
+#
+#   cp .env.prod.example .env.prod   # then edit the values
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Put a TLS-terminating reverse proxy (Caddy, nginx, Traefik or your cloud's load
+# balancer) in front of port 3000 and set APP_ORIGINS to your public hostname.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lessonplan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-lessonplan}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lessonplan} -d ${POSTGRES_DB:-lessonplan}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build:
+      context: ./web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lessonplan}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lessonplan}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET (32+ random chars) in .env.prod}
+      APP_ORIGINS: ${APP_ORIGINS:-}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      UPLOAD_DIR: /app/uploads
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-owner@example.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
+      ERROR_WEBHOOK_URL: ${ERROR_WEBHOOK_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PUSH_ENABLED: ${PUSH_ENABLED:-1}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+      APP_VERSION: ${APP_VERSION:-}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+
+  # Nightly backups of the database and uploads to the "backups" volume
+  # (and to S3 if BACKUP_S3_URI is set). Restore with web/scripts/restore.sh.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lessonplan}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lessonplan}
+      UPLOAD_DIR: /uploads
+      BACKUP_DIR: /backups
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_S3_URI: ${BACKUP_S3_URI:-}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - uploads:/uploads:ro
+      - backups:/backups
+      - ./web/scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c", "while true; do sh /backup.sh || echo backup failed; sleep ${BACKUP_INTERVAL_SECONDS:-86400}; done"]
+
+volumes:
+  pgdata:
+  uploads:
+  backups:

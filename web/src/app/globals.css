@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-serif), Georgia, "Times New Roman", serif;
+
+  /* Paper and ink */
+  --color-paper: #f4f5f7;
+  --color-paper-deep: #e9ebef;
+  --color-ink-950: #0e1626;
+  --color-ink-900: #152036;
+  --color-ink-800: #1f2d49;
+  --color-ink-700: #2f3f5e;
+  --color-ink-500: #5c6b87;
+  --color-ink-400: #60708a;
+  --color-ink-300: #b4bdcc;
+  --color-ink-200: #d9dee7;
+  --color-ink-100: #eceff4;
+
+  /* Semantic */
+  --color-leaf-600: #1f7a4d;
+  --color-leaf-100: #dcf3e6;
+  --color-marigold-600: #9c5d0b;
+  --color-marigold-500: #e39a2d;
+  --color-marigold-100: #fdf0d8;
+  --color-rose-600: #b4323f;
+  --color-rose-100: #fde3e6;
+  --color-sky-600: #2360c8;
+  --color-sky-100: #dde8fb;
+  --color-teal-600: #0f766e;
+  --color-teal-100: #d5efeb;
+  --color-violet-600: #4f46e5;
+  --color-violet-100: #e4e3fb;
+
+  --shadow-card: 0 1px 2px rgb(14 22 38 / 0.05), 0 8px 24px -16px rgb(14 22 38 / 0.18);
+  --shadow-lift: 0 1px 2px rgb(14 22 38 / 0.06), 0 16px 40px -20px rgb(14 22 38 / 0.28);
+  --radius-card: 14px;
+}
+
+/* Role accent, set on the shell via data-role and consumed as bg-accent etc. */
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+}
+
+:root,
+[data-role="SUPER_ADMIN"] {
+  --accent: #4f46e5;
+  --accent-soft: #e4e3fb;
+  --accent-fg: #ffffff;
+}
+[data-role="SCHOOL_ADMIN"] {
+  --accent: #2360c8;
+  --accent-soft: #dde8fb;
+  --accent-fg: #ffffff;
+}
+[data-role="TEACHER"] {
+  --accent: #0f766e;
+  --accent-soft: #d5efeb;
+  --accent-fg: #ffffff;
+}
+[data-role="STUDENT"] {
+  --accent: #9c5d0b;
+  --accent-soft: #fdf0d8;
+  --accent-fg: #ffffff;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Grid and flex children must be allowed to shrink below their content width,
+   otherwise a wide table forces the whole page to scroll sideways on phones. */
+.grid > * {
+  min-width: 0;
+}
+.grid {
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

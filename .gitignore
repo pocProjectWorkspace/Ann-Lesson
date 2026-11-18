@@ -1,0 +1,23 @@
+node_modules/
+.next/
+web/uploads/
+web/.env
+*.log
+mobile/.env
+mobile/dist/
+mobile/.expo/
+.env.prod
+mobile/dist-web/
+mobile/.env.web
+CREDENTIALS.local.md
+
+# generated at install / build time
+web/public/pdf.worker.min.mjs
+web/public/dev-axe.js
+web/.next/
+web/coverage/
+mobile/.expo/
+mobile/dist/
+.claude/
+mobile/.claude/
+web/.claude/

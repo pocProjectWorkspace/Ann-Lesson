@@ -1,0 +1,9 @@
+# Normalise line endings; shell scripts and Docker entrypoints must stay LF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.ico binary
+*.jpg binary
+*.pdf binary
+*.ttf binary
+*.woff2 binary

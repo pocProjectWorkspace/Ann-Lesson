@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lessonplan-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lessonplan
+      POSTGRES_PASSWORD: lessonplan
+      POSTGRES_DB: lessonplan
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - lessonplan_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lessonplan"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  lessonplan_pgdata:

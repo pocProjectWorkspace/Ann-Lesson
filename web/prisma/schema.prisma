@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+}
+
+/// One tenant. Every school-scoped row carries schoolId.
+model School {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique // short code students type at login, e.g. "GREENWOOD"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Subscription
+  plan          String    @default("TRIAL") // TRIAL | BASIC | PRO | CUSTOM
+  planExpiresAt DateTime? // null = never expires
+  maxStudents   Int       @default(50)
+  maxTeachers   Int       @default(5)
+  maxStorageMb  Int       @default(1024)
+
+  users    User[]
+  classes  Class[]
+  subjects Subject[]
+  lessons  Lesson[]
+  files    LessonFile[]
+  invoices Invoice[]
+  audits   AuditLog[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  schoolId     String? // null only for SUPER_ADMIN
+  role         Role
+  name         String
+  username     String // login id; unique within a school
+  email        String?
+  passwordHash String
+  isActive     Boolean  @default(true)
+  classId      String? // students: the class they belong to
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class    Class?  @relation("StudentsInClass", fields: [classId], references: [id], onDelete: SetNull)
+
+  teachingAssignments TeacherAssignment[]
+  progress            LessonProgress[]
+  sessions            Session[]
+  notifications       Notification[]
+  pushTokens          PushToken[]
+  confirmations       LessonProgress[]    @relation("ConfirmedBy")
+  auditActions        AuditLog[]
+
+  @@unique([schoolId, username])
+  @@index([schoolId, role])
+}
+
+/// One row per signed-in device. Lets us revoke access immediately.
+model Session {
+  id         String    @id @default(uuid())
+  userId     String
+  kind       String    @default("web") // "web" | "mobile"
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Class {
+  id           String   @id @default(uuid())
+  schoolId     String
+  name         String // e.g. "Grade 5"
+  section      String? // e.g. "A"
+  academicYear String? // e.g. "2026-27"
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  school   School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjects Subject[]
+  students User[]              @relation("StudentsInClass")
+  teachers TeacherAssignment[]
+
+  @@index([schoolId])
+}
+
+model Subject {
+  id        String   @id @default(uuid())
+  schoolId  String
+  classId   String
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([classId])
+}
+
+model Lesson {
+  id          String   @id @default(uuid())
+  schoolId    String
+  subjectId   String
+  title       String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  school   School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject  Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  files    LessonFile[]
+  progress LessonProgress[]
+
+  @@index([subjectId])
+}
+
+model LessonFile {
+  id         String   @id @default(uuid())
+  schoolId   String
+  lessonId   String
+  fileName   String
+  storageKey String   @unique
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model TeacherAssignment {
+  id        String @id @default(uuid())
+  teacherId String
+  classId   String
+
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId])
+}
+
+model LessonProgress {
+  id            String    @id @default(uuid())
+  studentId     String
+  lessonId      String
+  firstViewedAt DateTime  @default(now())
+  lastViewedAt  DateTime  @default(now())
+  learntAt      DateTime?
+  confirmedAt   DateTime? // teacher confirmed the student has learnt it
+  confirmedById String?
+
+  student     User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson      Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  confirmedBy User?  @relation("ConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, lessonId])
+}
+
+/// In-app notification for one user.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  body      String?
+  href      String?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+/// Who did what, for platform and school admins.
+model AuditLog {
+  id         String   @id @default(uuid())
+  schoolId   String? // null for platform-level actions
+  actorId    String?
+  actorName  String
+  action     String // e.g. "student.create"
+  targetType String? // e.g. "User"
+  targetId   String?
+  summary    String // human-readable one line
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actor  User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, createdAt])
+  @@index([createdAt])
+}
+
+/// Manual invoice raised by the platform owner against a school.
+model Invoice {
+  id          String    @id @default(uuid())
+  schoolId    String
+  number      String    @unique
+  description String
+  amountCents Int
+  currency    String    @default("INR")
+  issuedAt    DateTime  @default(now())
+  dueAt       DateTime
+  paidAt      DateTime?
+  note        String?
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, issuedAt])
+}
+
+/// Expo push token for one device of one user.
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String? // ios | android | web
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

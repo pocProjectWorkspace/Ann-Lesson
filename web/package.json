@@ -1,0 +1,59 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate && node scripts/copy-pdf-worker.mjs",
+    "seed:demo": "tsx prisma/seed-demo.ts",
+    "test": "vitest run tests/unit",
+    "test:watch": "vitest tests/unit",
+    "test:api": "vitest run tests/api --no-file-parallelism",
+    "test:all": "npm run test && npm run test:api",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "secret": "node -e \"console.log(require('crypto').randomBytes(36).toString('base64url'))\"",
+    "reset:kindergarten": "tsx prisma/reset-to-kindergarten.ts",
+    "seed:sample": "tsx prisma/seed-sample-lesson.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1170.0",
+    "@aws-sdk/lib-storage": "^3.1171.0",
+    "@aws-sdk/s3-request-presigner": "^3.1170.0",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.17",
+    "next": "16.4.6",
+    "page-flip": "^2.0.7",
+    "pdfjs-dist": "^6.5.438",
+    "prisma": "^6.19.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "axe-core": "^4.14.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "pdf-lib": "^1.17.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.0",
+    "wait-on": "^9.5.1"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
