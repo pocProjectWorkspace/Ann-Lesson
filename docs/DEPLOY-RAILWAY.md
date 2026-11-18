@@ -42,7 +42,7 @@ directly, which is a cross-origin request.
 ## 2. Railway project
 
 1. railway.com → **New Project** → **Deploy from GitHub repo** → pick
-   `pocProjectWorkspace/KinderPlan`. Railway creates a service for it.
+   `pocProjectWorkspace/Ann-Lesson`. Railway creates a service for it.
 2. Service → **Settings**:
    - **Root Directory**: `web`
    - Builder is detected from `web/railway.json` (Dockerfile). Health check
