@@ -2,10 +2,11 @@ import "server-only";
 import type { School } from "@prisma/client";
 import { db } from "./db";
 
+// Storage allowances assume scanned picture-book PDFs of 50–400 MB each.
 export const PLANS = {
-  TRIAL: { label: "Trial", maxStudents: 50, maxTeachers: 5, maxStorageMb: 1024, days: 30 },
-  BASIC: { label: "Basic", maxStudents: 500, maxTeachers: 40, maxStorageMb: 10 * 1024, days: 365 },
-  PRO: { label: "Pro", maxStudents: 100_000, maxTeachers: 5_000, maxStorageMb: 50 * 1024, days: 365 },
+  TRIAL: { label: "Trial", maxStudents: 50, maxTeachers: 5, maxStorageMb: 5 * 1024, days: 30 },
+  BASIC: { label: "Basic", maxStudents: 500, maxTeachers: 40, maxStorageMb: 25 * 1024, days: 365 },
+  PRO: { label: "Pro", maxStudents: 100_000, maxTeachers: 5_000, maxStorageMb: 100 * 1024, days: 365 },
   CUSTOM: { label: "Custom", maxStudents: 0, maxTeachers: 0, maxStorageMb: 0, days: 0 },
 } as const;
 export type PlanKey = keyof typeof PLANS;

@@ -168,7 +168,7 @@ web/
 - **Notifications.** Students and teachers get in-app notifications (bell in the sidebar, `/notifications`) when a lesson gets its first PDF, when a class is promoted, when a teacher is assigned, and when a teacher confirms a lesson. Mobile: `GET/POST /api/mobile/notifications`.
 - **Learnt needs evidence.** A student can mark a lesson learnt only after opening its PDF. A teacher can confirm it, singly or all at once. A confirmed lesson cannot be undone by the student. The progress export shows Viewed, Learnt or Confirmed per lesson.
 - **Audit log.** Every admin action is recorded with who, when and what. School admins see their school at `/school/audit`; the owner sees everything at `/admin/audit`.
-- **Plans, limits and invoices.** Each school has a plan (Trial 30 days, Basic, Pro or Custom), an expiry date and limits for students, teachers and storage. Limits are enforced when adding users or uploading. An expired plan pauses additions but not reading. The owner edits plans and raises manual invoices on the school page; the school sees them at `/school/billing`. There is no payment gateway. Invoices are paid outside the app and marked paid by the owner.
+- **Plans, limits and invoices.** Each school has a plan (Trial 30 days with 5 GB, Basic with 25 GB, Pro with 100 GB, or Custom), an expiry date and limits for students, teachers and storage. Limits are enforced when adding users or uploading. An expired plan pauses additions but not reading. The owner edits plans and raises manual invoices on the school page; the school sees them at `/school/billing`. There is no payment gateway. Invoices are paid outside the app and marked paid by the owner.
 
 ## Operations
 
