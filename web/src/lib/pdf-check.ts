@@ -11,7 +11,7 @@ export function looksLikePdf(bytes: Uint8Array) {
 /**
  * Largest PDF a school may upload, in MB. Configurable with MAX_UPLOAD_MB on the server
  * and NEXT_PUBLIC_MAX_UPLOAD_MB for the browser-side check (set both to the same value).
- * Defaults to 250 MB. Uploads stream to storage, so this is a policy limit, not a memory one.
+ * Defaults to 500 MB. Uploads stream to storage, so this is a policy limit, not a memory one.
  */
-export const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 250) || 250;
+export const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 500) || 500;
 export const MAX_PDF_BYTES = MAX_UPLOAD_MB * 1024 * 1024;

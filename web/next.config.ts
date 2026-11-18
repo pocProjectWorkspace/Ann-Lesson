@@ -5,8 +5,8 @@ import type { NextConfig } from "next";
 const allowedOrigins = process.env.APP_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean);
 
 // Uploads stream through /api/uploads, which the proxy guards, so the proxy body cap must
-// sit above MAX_UPLOAD_MB (default 250). Without this Next.js truncates bodies at 10 MB.
-const uploadCapMb = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 250) || 250;
+// sit above MAX_UPLOAD_MB (default 500). Without this Next.js truncates bodies at 10 MB.
+const uploadCapMb = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 500) || 500;
 
 const nextConfig: NextConfig = {
   output: "standalone",

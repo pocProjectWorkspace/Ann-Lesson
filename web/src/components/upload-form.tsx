@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Field, Input } from "./ui";
 
-const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 250) || 250;
+const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 500) || 500;
 
 /**
  * Uploads PDFs straight to /api/uploads/lesson-file with a progress bar.

@@ -111,7 +111,7 @@ Student password `Learn1234`, teacher password `Teach1234`. All seeds skip what 
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the token API from a browser, e.g. `https://m.example.com` |
 | `ERROR_WEBHOOK_URL` | Optional webhook that receives a JSON payload for every server error |
 | `PUSH_ENABLED`, `EXPO_ACCESS_TOKEN` | Set `PUSH_ENABLED=0` to disable push; the access token is optional |
-| `MAX_UPLOAD_MB`, `NEXT_PUBLIC_MAX_UPLOAD_MB` | Largest PDF a school may upload, default 250. Set both to the same value |
+| `MAX_UPLOAD_MB`, `NEXT_PUBLIC_MAX_UPLOAD_MB` | Largest PDF a school may upload, default 500. Set both to the same value |
 | `STORAGE_DRIVER` | `local` or `s3` |
 | `UPLOAD_DIR` | Folder for local storage (default `./uploads`) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 settings when `STORAGE_DRIVER=s3`. `S3_ENDPOINT` is only needed for non-AWS providers |
