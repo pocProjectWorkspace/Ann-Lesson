@@ -109,6 +109,7 @@ Student password `Learn1234`, teacher password `Teach1234`. All seeds skip what 
 | `AUTH_SECRET` | 32+ random characters used to sign sessions |
 | `APP_ORIGINS` | Comma-separated public hostnames, e.g. `app.example.com`. Used for CSRF protection in production |
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the token API from a browser, e.g. `https://m.example.com` |
+| `ALLOWED_DEV_ORIGINS` | Development only. LAN hosts that phones use to reach the dev server, e.g. `192.168.1.20`, so the embedded book viewer can load its scripts. Not used in production |
 | `ERROR_WEBHOOK_URL` | Optional webhook that receives a JSON payload for every server error |
 | `PUSH_ENABLED`, `EXPO_ACCESS_TOKEN` | Set `PUSH_ENABLED=0` to disable push; the access token is optional |
 | `MAX_UPLOAD_MB`, `NEXT_PUBLIC_MAX_UPLOAD_MB` | Largest PDF a school may upload, default 500. Set both to the same value |
@@ -257,3 +258,7 @@ PostgreSQL if you prefer not to run the `db` service.
 - Run `npx prisma migrate deploy` on each release.
 - `npm run build && npm start` produces the production server. It runs on any
   Node host or in Docker.
+
+## Troubleshooting
+
+- **Every page reloads once a second in development.** The Turbopack cache in `web/.next` is stale, usually after a change to `next.config.ts`. Stop the server, delete `web/.next`, start again.

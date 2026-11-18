@@ -8,8 +8,15 @@ const allowedOrigins = process.env.APP_ORIGINS?.split(",").map((s) => s.trim()).
 // sit above MAX_UPLOAD_MB (default 500). Without this Next.js truncates bodies at 10 MB.
 const uploadCapMb = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 500) || 500;
 
+// Development only: hostnames (not URLs) that may load the dev server's scripts,
+// e.g. your LAN address when a phone running Expo Go or the mobile web build opens
+// the book viewer through it. Without this Next.js blocks /_next/* for other hosts
+// and the embedded viewer stays on "Opening book…". Ignored in production.
+const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean);
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
   experimental: {
     proxyClientMaxBodySize: `${uploadCapMb + 50}mb`,
     serverActions: {

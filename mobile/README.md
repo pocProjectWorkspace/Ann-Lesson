@@ -29,6 +29,8 @@ npm install
 # Point the app at your computer's LAN address (not localhost) so a phone can reach it.
 # The web server prints it on start, e.g. "Network: http://192.168.1.20:3000".
 echo EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 > .env
+# And in web/.env, so the dev server serves the book viewer to that address:
+#   ALLOWED_DEV_ORIGINS=192.168.1.20
 npm start
 ```
 
@@ -37,7 +39,9 @@ Then scan the QR code with Expo Go (Android) or the Camera app (iOS), or press
 can also use `http://10.0.2.2:3000`, which is the default when `.env` is absent.
 
 Test logins are listed in the root README. Admin accounts are refused by the app
-on purpose.
+on purpose. Teachers and students can read PDFs in the app but not download them.
+
+Checks: `npx tsc --noEmit` and `npm run lint` (Expo's ESLint config); CI runs both.
 
 ## Run it in a browser (no device needed)
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Platform, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { api } from "../../lib/api";
@@ -13,25 +13,28 @@ import { Button, ErrorBox, Loading } from "../../lib/ui";
  */
 export default function ViewerScreen() {
   const { fileId, title } = useLocalSearchParams<{ fileId: string; title?: string }>();
-  const [uri, setUri] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // One state object keyed by attempt, so a retry or a new file resets the
+  // screen without calling setState synchronously inside the effect.
+  const [state, setState] = useState<{ key: string; uri: string | null; error: string | null }>({ key: "", uri: null, error: null });
   const [attempt, setAttempt] = useState(0);
+  const key = `${fileId}:${attempt}`;
+  const current = state.key === key ? state : { key, uri: null, error: null };
+  const { uri, error } = current;
+  const setError = (m: string) => setState({ key, uri: null, error: m });
 
   useEffect(() => {
     let cancelled = false;
-    setUri(null);
-    setError(null);
     api
       .webviewToken()
       .then(({ token }) => {
         if (cancelled) return;
-        setUri(`${API_URL}/embed/viewer/${fileId}?t=${encodeURIComponent(token)}`);
+        setState({ key, uri: `${API_URL}/embed/viewer/${fileId}?t=${encodeURIComponent(token)}`, error: null });
       })
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Could not open the book"));
+      .catch((e) => !cancelled && setState({ key, uri: null, error: e instanceof Error ? e.message : "Could not open the book" }));
     return () => {
       cancelled = true;
     };
-  }, [fileId, attempt]);
+  }, [fileId, key]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0e1626" }}>
@@ -51,8 +54,7 @@ export default function ViewerScreen() {
 /** On the web build there is no WebView component; an iframe does the same job. */
 function WebFrame({ uri, title }: { uri: string; title: string }) {
   // react-native-web renders View as a div, so a raw iframe element is fine here.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Iframe = "iframe" as any;
+  const Iframe = "iframe" as unknown as ComponentType<Record<string, unknown>>;
   return <Iframe src={uri} title={title} style={{ flex: 1, width: "100%", height: "100%", border: 0, background: "#0e1626" }} />;
 }
 

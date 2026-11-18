@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { api, type NotificationItem } from "../lib/api";
+import { useCached } from "../lib/use-cached";
 import { Card, Empty, ErrorBox, Loading, Muted, colors, palette } from "../lib/ui";
 
 function when(iso: string) {
@@ -24,38 +24,21 @@ function routeFor(href: string | null): { pathname: "/lesson/[id]" | "/class/[id
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [items, setItems] = useState<NotificationItem[] | null>(null);
-  const [unread, setUnread] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setError(null);
-      const r = await api.notifications();
-      setItems(r.items);
-      setUnread(r.unread);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load");
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Same cached loader as the other screens: shows the last list offline and
+  // keeps the fetch out of a setState-in-effect pattern.
+  const { data, setData, error, refreshing, refresh, reload } = useCached("notifications", () => api.notifications());
+  const items = data?.items ?? null;
+  const unread = data?.unread ?? 0;
 
   const markAll = async () => {
     await api.markNotificationsRead().catch(() => {});
-    void load();
+    void reload();
   };
 
   const open = async (n: NotificationItem) => {
     if (!n.readAt) {
       api.markNotificationsRead([n.id]).catch(() => {});
-      setItems((prev) => prev?.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)) ?? null);
-      setUnread((u) => Math.max(0, u - 1));
+      setData((prev) => (prev ? { ...prev, unread: Math.max(0, prev.unread - 1), items: prev.items.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)) } : prev));
     }
     const r = routeFor(n.href);
     if (r) router.push(r as never);
@@ -74,7 +57,7 @@ export default function NotificationsScreen() {
             ) : null,
         }}
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} />}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         {error ? <ErrorBox message={error} /> : null}
         {!items && !error ? <Loading /> : null}
         {items && items.length === 0 ? <Empty>Nothing yet. You will be told here when new lessons are published or your class changes.</Empty> : null}
