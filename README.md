@@ -209,6 +209,14 @@ colour contrast on both the paper and dark surfaces. Re-run an audit locally by 
 `node_modules/axe-core/axe.min.js` at `web/public/dev-axe.js` (git-ignored) and running
 `axe.run()` from the browser console.
 
+## Uploads and memory
+
+The upload route (`PUT /api/uploads/lesson-file`) sits outside the auth proxy on purpose.
+When the proxy runs on a request, Next.js buffers the whole body in memory to replay it to
+the route; a 300 MB book would then exceed a small container's memory. The route does its
+own Origin, session and role checks and streams the body to storage in 8 MB parts, so a
+380 MB upload peaks at under 200 MB of server memory.
+
 ## Security headers
 
 Every response carries HSTS, `nosniff`, a referrer policy and a permissions policy.

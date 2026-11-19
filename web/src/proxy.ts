@@ -8,7 +8,6 @@ const PROTECTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/student", roles: ["STUDENT"] },
   { prefix: "/account", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
   { prefix: "/api/files", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
-  { prefix: "/api/uploads", roles: ["SCHOOL_ADMIN"] },
 ];
 
 const HOME: Record<string, string> = {
@@ -65,6 +64,10 @@ function crossSite(req: NextRequest) {
   }
 }
 
+// /api/uploads is deliberately NOT matched here. When the proxy runs on a request,
+// Next.js buffers the whole body in memory to replay it to the route, which for a
+// 300 MB PDF is enough to get the container killed. The upload route checks the
+// session, role and Origin itself and streams the body straight to storage.
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const corsPath = CORS_PATHS.some((p) => pathname.startsWith(p));
@@ -111,5 +114,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/account/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/uploads/:path*", "/api/mobile/:path*", "/api/exports/:path*", "/api/health"],
+  matcher: ["/login", "/account/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/mobile/:path*", "/api/exports/:path*", "/api/health"],
 };

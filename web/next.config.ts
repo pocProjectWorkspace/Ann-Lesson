@@ -4,8 +4,9 @@ import type { NextConfig } from "next";
 // "app.example.com,www.example.com". Server actions refuse other origins.
 const allowedOrigins = process.env.APP_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean);
 
-// Uploads stream through /api/uploads, which the proxy guards, so the proxy body cap must
-// sit above MAX_UPLOAD_MB (default 500). Without this Next.js truncates bodies at 10 MB.
+// Safety net only: /api/uploads is excluded from the proxy matcher so bodies are not
+// buffered, but if a guarded path ever receives a large body this keeps it from being
+// truncated at Next.js's 10 MB default.
 const uploadCapMb = Number(process.env.MAX_UPLOAD_MB ?? process.env.NEXT_PUBLIC_MAX_UPLOAD_MB ?? 500) || 500;
 
 // Development only: hostnames (not URLs) that may load the dev server's scripts,

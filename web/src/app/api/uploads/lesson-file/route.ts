@@ -12,9 +12,25 @@ import { afterLessonFileStored } from "@/lib/lesson-files";
  * Body: raw PDF bytes. Streams to storage instead of buffering the whole file
  * in memory, and checks the PDF signature before anything is written.
  */
+/** Same cookie CSRF rule the proxy applies elsewhere: a browser Origin must match our host. */
+function crossSite(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  try {
+    return new URL(origin).host !== host;
+  } catch {
+    return true;
+  }
+}
+
 export async function PUT(req: NextRequest) {
+  // This route is outside the auth proxy on purpose (see proxy.ts), so it does the
+  // checks itself: no cross-site cookie writes, a live session, school-admin role.
+  if (crossSite(req)) return NextResponse.json({ error: "Cross-site request refused" }, { status: 403 });
   const session = await getSessionFromRequest(req);
-  if (!session || session.role !== "SCHOOL_ADMIN" || !session.schoolId) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "SCHOOL_ADMIN" || !session.schoolId) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
 
   const q = z.object({ lessonId: z.string().uuid(), name: z.string().min(1).max(200) }).safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!q.success) return NextResponse.json({ error: "Missing lesson or file name" }, { status: 400 });
