@@ -1,12 +1,15 @@
-node_modules
-.next
-uploads
-samples
-tests
+# Patterns are anchored with a leading slash on purpose: some builders (Railway's
+# included) match unanchored names at any depth, and a bare "uploads" would also
+# drop src/app/api/uploads from the image.
+/node_modules
+/.next
+/uploads
+/samples
+/tests
+/dist
+/coverage
 .env
 .env.*
 !.env.example
 *.log
 .git
-dist
-coverage

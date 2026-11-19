@@ -69,3 +69,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t lessonplan-web ./web
+      - name: Every route in src must exist in the image
+        run: |
+          missing=0
+          for f in $(cd web/src/app && find . -name route.ts -o -name page.tsx | sed "s#^./##"); do
+            out="${f%.ts}"; out="${out%.tsx}.js"
+            docker run --rm --entrypoint sh lessonplan-web -c "test -f .next/server/app/$out" || { echo "missing in image: $out"; missing=1; }
+          done
+          exit $missing
