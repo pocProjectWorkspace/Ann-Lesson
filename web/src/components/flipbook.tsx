@@ -72,10 +72,8 @@ export function Flipbook({ src, title, watermark }: { src: string; title: string
   useEffect(() => {
     let cancelled = false;
     let opened: PDFDocumentProxy | null = null;
-    setStatus({ kind: "opening" });
-    setDoc(null);
-    setCurrent(0);
-    currentRef.current = 0;
+    // No state reset here: PdfViewer mounts the Flipbook with key={fileId}, so a new
+    // file always starts from a fresh component in the "opening" state.
     (async () => {
       try {
         const pdfjs = await import("pdfjs-dist");
