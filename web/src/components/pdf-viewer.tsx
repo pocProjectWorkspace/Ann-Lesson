@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Flipbook } from "./flipbook";
+import { Flipbook, type ReadingTrack } from "./flipbook";
 
 type Mode = "book" | "scroll";
 const STORAGE_KEY = "lp.viewerMode";
@@ -39,7 +39,7 @@ function subscribe(cb: () => void) {
  * never handed to the browser's own viewer. (Determined viewers can still
  * screenshot pages; this is deterrence, not DRM.)
  */
-export function PdfViewer({ fileId, title, viewerName, restricted = false }: { fileId: string; title: string; viewerName?: string; restricted?: boolean }) {
+export function PdfViewer({ fileId, title, viewerName, restricted = false, track }: { fileId: string; title: string; viewerName?: string; restricted?: boolean; track?: ReadingTrack }) {
   const src = `/api/files/${fileId}`;
   const saved = useSyncExternalStore(subscribe, readMode, () => "book" as Mode);
   const mode: Mode = restricted ? "book" : saved;
@@ -74,7 +74,7 @@ export function PdfViewer({ fileId, title, viewerName, restricted = false }: { f
       </header>
       <div className="p-2 sm:p-3">
         {mode === "book" ? (
-          <Flipbook key={fileId} src={src} title={title} watermark={restricted ? viewerName : undefined} />
+          <Flipbook key={fileId} src={src} title={title} watermark={restricted ? viewerName : undefined} track={track} />
         ) : (
           <iframe src={`${src}#toolbar=0&navpanes=0`} title={title} className="h-[75vh] w-full rounded-lg bg-ink-100" />
         )}

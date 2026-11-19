@@ -28,7 +28,7 @@ export default async function StudentHome() {
     );
   }
 
-  const pct = home.totals.lessons ? Math.round((home.totals.learnt / home.totals.lessons) * 100) : 0;
+  const pct = home.totals.readPercent;
   const cont = home.continueLesson;
 
   return (
@@ -50,7 +50,7 @@ export default async function StudentHome() {
               {home.totals.learnt}
               <span className="text-ink-400"> / {home.totals.lessons}</span>
             </div>
-            <div className="text-sm text-ink-500">lessons learnt</div>
+            <div className="text-sm text-ink-500">lessons learnt, {pct}% read</div>
           </div>
         </div>
       </div>
@@ -65,7 +65,10 @@ export default async function StudentHome() {
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-accent">Continue reading</div>
             <div className="truncate font-display text-lg text-ink-950">{cont.title}</div>
-            <div className="text-sm text-ink-500">{cont.subjectName}</div>
+            <div className="text-sm text-ink-500">
+              {cont.subjectName}
+              {cont.pageCount ? ` · page ${Math.max(1, cont.lastPage)} of ${cont.pageCount}, ${cont.percent}% read` : ""}
+            </div>
           </div>
         </Link>
       )}
@@ -76,14 +79,14 @@ export default async function StudentHome() {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {home.subjects.map((s, i) => {
-            const p = s.lessonCount ? Math.round((s.learntCount / s.lessonCount) * 100) : 0;
+            const p = s.readPercent;
             return (
               <li key={s.id}>
                 <Link href={`/student/subjects/${s.id}`} className="group relative flex h-full overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-card transition hover:-translate-y-0.5 hover:shadow-lift">
                   <span aria-hidden className="w-3 shrink-0" style={{ background: spineColor(i) }} />
                   <div className="flex min-w-0 flex-1 flex-col px-5 py-5">
                     <div className="font-display text-[22px] leading-tight text-ink-950">{s.name}</div>
-                    <div className="mt-1 text-sm text-ink-500">{s.lessonCount === 0 ? "No lessons yet" : s.learntCount === s.lessonCount ? "All lessons learnt" : `${s.learntCount} of ${s.lessonCount} lesson${s.lessonCount === 1 ? "" : "s"} learnt`}</div>
+                    <div className="mt-1 text-sm text-ink-500">{s.lessonCount === 0 ? "No lessons yet" : s.learntCount === s.lessonCount ? "All lessons learnt" : `${s.learntCount} of ${s.lessonCount} lesson${s.lessonCount === 1 ? "" : "s"} learnt, ${p}% read`}</div>
                     <div className="mt-auto pt-5">
                       <ProgressBar value={p} label={`${s.name} progress`} />
                     </div>
@@ -102,7 +105,7 @@ function Ring({ pct }: { pct: number }) {
   const r = 22;
   const c = 2 * Math.PI * r;
   return (
-    <svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label={`${pct} percent learnt`}>
+    <svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label={`${pct} percent read`}>
       <circle cx="28" cy="28" r={r} fill="none" stroke="var(--color-ink-100)" strokeWidth="6" />
       <circle cx="28" cy="28" r={r} fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} transform="rotate(-90 28 28)" />
       <text x="28" y="32" textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--color-ink-900)">

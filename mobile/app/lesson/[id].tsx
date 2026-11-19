@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { api, type StudentLesson, type TeacherLessonDetail } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useCached } from "../../lib/use-cached";
@@ -22,7 +22,10 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { data: lesson, setData: setLesson, error: loadError, offline, cachedAt, refreshing, refresh } = useCached<Lesson>(`lesson:${id}`, () => api.lesson(id), [id]);
+  const { data: lesson, setData: setLesson, error: loadError, offline, cachedAt, refreshing, refresh, reload } = useCached<Lesson>(`lesson:${id}`, () => api.lesson(id), [id]);
+  // Coming back from the book viewer: pick up the reading position it reported.
+  const seen = useCallback(() => () => void reload(), [reload]);
+  useFocusEffect(seen);
   const [actionError, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const error = actionError ?? loadError;
@@ -91,8 +94,9 @@ export default function LessonScreen() {
               <Card>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                   <Text style={{ fontWeight: "700", color: palette.ink900 }}>Your progress</Text>
-                  {lesson.progress.confirmedAt ? <Badge tone="green">Confirmed by teacher</Badge> : lesson.progress.learnt ? <Badge tone="green">Learnt</Badge> : lesson.progress.viewed ? <Badge tone="accent">In progress</Badge> : <Badge>Not started</Badge>}
+                  {lesson.progress.confirmedAt ? <Badge tone="green">Confirmed by teacher</Badge> : lesson.progress.learnt ? <Badge tone="green">Learnt</Badge> : lesson.progress.finished ? <Badge tone="green">Finished reading</Badge> : lesson.progress.viewed ? <Badge tone="accent">{lesson.progress.pageCount ? `Read ${lesson.progress.percent ?? 0}%` : "In progress"}</Badge> : <Badge>Not started</Badge>}
                 </View>
+                {lesson.progress.pageCount && !lesson.progress.learnt && !lesson.progress.confirmedAt ? <Muted>{lesson.progress.finished ? "You reached the end. Mark it as learnt when you know it." : `Page ${Math.max(1, lesson.progress.lastPage ?? 1)} of ${lesson.progress.pageCount}. Open the book to carry on.`}</Muted> : null}
                 {lesson.progress.learntAt ? <Muted>Marked learnt on {formatDate(lesson.progress.learntAt)}</Muted> : null}
                 {lesson.progress.confirmedAt ? (
                   <Muted>Your teacher confirmed this on {formatDate(lesson.progress.confirmedAt)}. It can no longer be undone.</Muted>
@@ -112,7 +116,7 @@ export default function LessonScreen() {
                   <Muted style={{ padding: 14, paddingTop: 0 }}>No students in this class.</Muted>
                 ) : (
                   lesson.students.map((s) => {
-                    const state = s.confirmedAt ? "confirmed" : s.learntAt ? "learnt" : s.viewedAt ? "viewed" : "none";
+                    const state = s.confirmedAt ? "confirmed" : s.learntAt ? "learnt" : s.finishedAt ? "finished" : s.viewedAt ? "viewed" : "none";
                     return (
                       <View key={s.id} style={{ flexDirection: "row", alignItems: "center", padding: 12, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: palette.borderSoft, gap: 8 }}>
                         <View style={{ flex: 1 }}>
@@ -121,7 +125,8 @@ export default function LessonScreen() {
                           <View style={{ marginTop: 4, flexDirection: "row" }}>
                             {state === "confirmed" && <Badge tone="green">Confirmed</Badge>}
                             {state === "learnt" && <Badge tone="accent">Says learnt</Badge>}
-                            {state === "viewed" && <Badge>Viewed</Badge>}
+                            {state === "finished" && <Badge tone="accent">Finished reading</Badge>}
+                            {state === "viewed" && <Badge>{s.percent ? `Reading, ${s.percent}%` : "Opened"}</Badge>}
                             {state === "none" && <Badge tone="amber">Not yet</Badge>}
                           </View>
                         </View>

@@ -20,7 +20,7 @@ export default async function StudentLesson({ params, searchParams }: { params: 
         crumbs={[{ href: "/student", label: "My subjects" }, { href: `/student/subjects/${lesson.subject.id}`, label: lesson.subject.name }, { label: `Lesson ${lesson.position}` }]}
         title={lesson.title}
         subtitle={lesson.description ?? undefined}
-        actions={<LearntForm lessonId={lesson.id} learnt={lesson.progress.learnt} confirmed={!!lesson.progress.confirmedAt} />}
+        actions={<LearntForm lessonId={lesson.id} learnt={lesson.progress.learnt} confirmed={!!lesson.progress.confirmedAt} finished={lesson.progress.finished} percent={lesson.progress.percent} pageCount={lesson.progress.pageCount} />}
       />
 
       {lesson.files.length > 1 && (
@@ -33,7 +33,7 @@ export default async function StudentLesson({ params, searchParams }: { params: 
         </nav>
       )}
 
-      {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} /> : <Empty>This lesson has no PDF yet.</Empty>}
+      {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} /> : <Empty>This lesson has no PDF yet.</Empty>}
 
       <nav aria-label="Previous and next lesson" className="mt-6 grid gap-3 sm:grid-cols-2">
         {lesson.prev ? (

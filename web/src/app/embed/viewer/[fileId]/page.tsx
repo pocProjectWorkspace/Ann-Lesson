@@ -12,7 +12,7 @@ export default async function EmbeddedViewer({ params, searchParams }: { params:
   const { fileId } = await params;
   const { t } = await searchParams;
   const session = (await getSession()) ?? (await readWebviewSession(t));
-  const file = session ? await db.lessonFile.findUnique({ where: { id: fileId }, select: { id: true, fileName: true, schoolId: true } }) : null;
+  const file = session ? await db.lessonFile.findUnique({ where: { id: fileId }, select: { id: true, fileName: true, schoolId: true, lessonId: true } }) : null;
   const allowed = !!session && !!file && (session.role === "SUPER_ADMIN" || session.schoolId === file.schoolId);
 
   if (!allowed) {
@@ -23,9 +23,12 @@ export default async function EmbeddedViewer({ params, searchParams }: { params:
     );
   }
   const src = `/api/files/${file.id}${t ? `?t=${encodeURIComponent(t)}` : ""}`;
+  // Students resume where they left off and report their position as they read.
+  const own = session.role === "STUDENT" ? await db.lessonProgress.findUnique({ where: { studentId_lessonId: { studentId: session.userId, lessonId: file.lessonId } }, select: { lastPage: true } }) : null;
+  const track = session.role === "STUDENT" ? { lessonId: file.lessonId, startPage: own?.lastPage || 1, token: t } : undefined;
   return (
     <main className="min-h-screen bg-slate-900 p-2">
-      <Flipbook src={src} title={file.fileName} watermark={session.role === "STUDENT" || session.role === "TEACHER" ? session.name : undefined} />
+      <Flipbook src={src} title={file.fileName} watermark={session.role === "STUDENT" || session.role === "TEACHER" ? session.name : undefined} track={track} />
     </main>
   );
 }

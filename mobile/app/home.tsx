@@ -102,12 +102,12 @@ export default function HomeScreen() {
             <Empty>{home.class ? "No lessons have been published for your class yet." : "You have not been placed in a class yet. Ask your school admin."}</Empty>
           ) : (
             home.subjects.map((s, i) => {
-              const pct = s.lessonCount ? Math.round((s.learntCount / s.lessonCount) * 100) : 0;
+              const pct = s.readPercent ?? (s.lessonCount ? Math.round((s.learntCount / s.lessonCount) * 100) : 0);
               return (
                 <Pressable key={s.id} onPress={() => router.push({ pathname: "/subject/[id]", params: { id: s.id } })} accessibilityRole="button" accessibilityLabel={`${s.name}, ${s.learntCount} of ${s.lessonCount} lessons learnt`}>
                   <SpineCard index={i}>
                     <Text style={{ fontSize: 20, fontWeight: "700", color: palette.ink950, fontFamily: "serif" }}>{s.name}</Text>
-                    <Muted>{s.lessonCount === 0 ? "No lessons yet" : s.learntCount === s.lessonCount ? "All lessons learnt" : `${s.learntCount} of ${s.lessonCount} lesson${s.lessonCount === 1 ? "" : "s"} learnt`}</Muted>
+                    <Muted>{s.lessonCount === 0 ? "No lessons yet" : s.learntCount === s.lessonCount ? "All lessons learnt" : `${s.learntCount} of ${s.lessonCount} lesson${s.lessonCount === 1 ? "" : "s"} learnt, ${pct}% read`}</Muted>
                     <View style={{ marginTop: 6 }}>
                       <ProgressBar value={pct} />
                     </View>

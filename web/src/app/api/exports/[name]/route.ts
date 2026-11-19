@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ name: strin
         const p = l.progress.find((x) => x.studentId === st.id);
         if (p?.confirmedAt) confirmed++;
         if (p?.learntAt) learnt++;
-        return p?.confirmedAt ? "Confirmed" : p?.learntAt ? "Learnt" : p ? "Viewed" : "";
+        return p?.confirmedAt ? "Confirmed" : p?.learntAt ? "Learnt" : p?.finishedAt ? "Finished reading" : p ? (p.pageCount && p.maxPage ? `Read ${Math.round((p.maxPage / p.pageCount) * 100)}%` : "Opened") : "";
       });
       return [st.name, st.username, ...cells, learnt, confirmed, lessons.length];
     });

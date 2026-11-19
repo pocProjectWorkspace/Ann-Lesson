@@ -38,6 +38,27 @@ describe("learning flow", () => {
     expect(r.data?.learnt).toBe(true);
   });
 
+  it("tracks reading position and marks the lesson finished at the last page", async () => {
+    const home = (await api<Home>("/api/mobile/home", { token: student })).data!;
+    const lessonId = home.subjects.flatMap((x) => x.lessons)[0].id;
+    type Pos = { percent: number; finished: boolean; lastPage: number; state: string };
+    const mid = await api<Pos>(`/api/mobile/lessons/${lessonId}/position`, { method: "POST", token: student, body: JSON.stringify({ page: 2, pageCount: 4 }) });
+    expect(mid.status).toBe(200);
+    expect(mid.data!.lastPage).toBe(2);
+    expect([false, true]).toContain(mid.data!.finished); // may already be finished from an earlier run
+    const back = await api<Pos>(`/api/mobile/lessons/${lessonId}/position`, { method: "POST", token: student, body: JSON.stringify({ page: 1, pageCount: 4 }) });
+    expect(back.data!.lastPage).toBe(1);
+    expect(back.data!.percent).toBeGreaterThanOrEqual(mid.data!.finished ? 100 : 50); // furthest page, not current page, drives the percent
+    const end = await api<Pos>(`/api/mobile/lessons/${lessonId}/position`, { method: "POST", token: student, body: JSON.stringify({ page: 4, pageCount: 4 }) });
+    expect(end.data!.finished).toBe(true);
+    expect(end.data!.percent).toBe(100);
+    const detail = (await api<{ progress: { percent: number; finished: boolean; lastPage: number } }>(`/api/mobile/lessons/${lessonId}`, { token: student })).data!;
+    expect(detail.progress.finished).toBe(true);
+    expect(detail.progress.lastPage).toBe(4);
+    expect((await api(`/api/mobile/lessons/${lessonId}/position`, { method: "POST", token: student, body: JSON.stringify({ page: 0, pageCount: 4 }) })).status).toBe(400);
+    expect((await api(`/api/mobile/lessons/${lessonId}/position`, { method: "POST", token: teacher, body: JSON.stringify({ page: 1, pageCount: 4 }) })).status).toBe(403);
+  });
+
   it("teacher confirmation locks the lesson for the student", async () => {
     const home = (await api<Home>("/api/mobile/home", { token: student })).data!;
     const learnt = home.subjects.flatMap((x) => x.lessons).find((l) => l.learnt)!;

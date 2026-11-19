@@ -169,6 +169,12 @@ model LessonProgress {
   learntAt      DateTime?
   confirmedAt   DateTime? // teacher confirmed the student has learnt it
   confirmedById String?
+  // Reading position, reported by the book viewer: the page the student is on, the
+  // furthest page reached, how many pages the book has, and when the end was reached.
+  lastPage      Int       @default(0)
+  maxPage       Int       @default(0)
+  pageCount     Int?
+  finishedAt    DateTime?
 
   student     User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   lesson      Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)

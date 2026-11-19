@@ -208,6 +208,21 @@ the route; a 300 MB book would then exceed a small container's memory. The route
 own Origin, session and role checks and streams the body to storage in 8 MB parts, so a
 380 MB upload peaks at under 200 MB of server memory.
 
+## Reading progress
+
+Two things are tracked per student and lesson, and they are deliberately separate:
+
+- **Reading position**, reported by the book viewer as pages are turned
+  (`POST /api/mobile/lessons/:id/position`): current page, furthest page reached and page
+  count. It drives the percentages on the student home, subject and lesson pages, the
+  "Continue reading" card (which reopens the book at the last page), the teacher's
+  per-student view and the progress CSV. Reaching the last page marks the lesson
+  **finished reading**.
+- **Learnt**, which the student claims with a button and the teacher can confirm.
+  Finishing the book nudges the student to mark it learnt but never does so for them.
+
+The mobile app's embedded viewer reports position with the web-view hand-off token.
+
 ## Security headers
 
 Every response carries HSTS, `nosniff`, a referrer policy and a permissions policy.

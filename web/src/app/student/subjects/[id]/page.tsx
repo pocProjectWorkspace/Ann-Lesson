@@ -13,7 +13,7 @@ export default async function StudentSubject({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <PageHeader crumbs={[{ href: "/student", label: "My subjects" }, { label: subject.name }]} title={subject.name} subtitle={total === 0 ? "No lessons yet" : `${done} of ${total} lesson${total === 1 ? "" : "s"} learnt`} />
+      <PageHeader crumbs={[{ href: "/student", label: "My subjects" }, { label: subject.name }]} title={subject.name} subtitle={total === 0 ? "No lessons yet" : `${done} of ${total} lesson${total === 1 ? "" : "s"} learnt, ${subject.readPercent}% read`} />
       {total > 0 && <ProgressBar value={(done / total) * 100} className="mb-6 max-w-md" label={`${subject.name} progress`} />}
       {total === 0 ? (
         <Empty>No lessons have been published in this subject yet.</Empty>
@@ -27,7 +27,7 @@ export default async function StudentSubject({ params }: { params: Promise<{ id:
                   <span className="block truncate font-display text-[17px] text-ink-950">{l.title}</span>
                   {l.description && <span className="mt-0.5 block truncate text-sm text-ink-500">{l.description}</span>}
                 </span>
-                {l.state === "confirmed" ? <Badge tone="green">Confirmed</Badge> : l.state === "learnt" ? <Badge tone="green">Learnt</Badge> : l.state === "viewed" ? <Badge tone="accent">In progress</Badge> : <Badge>New</Badge>}
+                {l.state === "confirmed" ? <Badge tone="green">Confirmed</Badge> : l.state === "learnt" ? <Badge tone="green">Learnt</Badge> : l.state === "finished" ? <Badge tone="green">Finished reading</Badge> : l.state === "viewed" ? <Badge tone="accent">{l.pageCount ? `Read ${l.percent}%` : "In progress"}</Badge> : <Badge>New</Badge>}
               </Link>
             </li>
           ))}

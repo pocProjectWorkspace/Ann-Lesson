@@ -86,7 +86,10 @@ export async function proxy(req: NextRequest) {
   // First gate: a validly signed token. Pages and routes then check the session table.
   const auth = req.headers.get("authorization");
   const bearer = pathname.startsWith("/api/") && auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : undefined;
-  const queryToken = pathname.startsWith("/api/files/") ? req.nextUrl.searchParams.get("t") ?? undefined : undefined;
+  // The web-view hand-off token is accepted on the file route and on the reading-position
+  // endpoint, which the embedded viewer calls from the mobile app without cookies.
+  const webviewPath = pathname.startsWith("/api/files/") || /^\/api\/mobile\/lessons\/[^/]+\/position$/.test(pathname);
+  const queryToken = webviewPath ? req.nextUrl.searchParams.get("t") ?? undefined : undefined;
   const token = bearer ?? queryToken ?? req.cookies.get("lp_session")?.value;
   let role: string | null = null;
   if (token) {

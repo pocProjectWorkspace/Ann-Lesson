@@ -45,7 +45,7 @@ export default function SubjectScreen() {
                   </Text>
                   {l.description ? <Muted style={{ marginTop: 2 }}>{l.description.length > 60 ? l.description.slice(0, 60) + "…" : l.description}</Muted> : null}
                 </View>
-                {l.state === "confirmed" ? <Badge tone="green">Confirmed</Badge> : l.learnt ? <Badge tone="green">Learnt</Badge> : l.viewed ? <Badge tone="accent">In progress</Badge> : <Badge>New</Badge>}
+                {l.state === "confirmed" ? <Badge tone="green">Confirmed</Badge> : l.learnt ? <Badge tone="green">Learnt</Badge> : l.finished ? <Badge tone="green">Finished</Badge> : l.viewed ? <Badge tone="accent">{l.pageCount ? `Read ${l.percent ?? 0}%` : "In progress"}</Badge> : <Badge>New</Badge>}
               </Pressable>
             ))}
           </Card>

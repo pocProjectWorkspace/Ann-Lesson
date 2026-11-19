@@ -57,7 +57,8 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
                   <Td>
                     {s.state === "confirmed" && <Badge tone="green">Confirmed {formatDate(s.confirmedAt)}</Badge>}
                     {s.state === "learnt" && <Badge tone="accent">Says learnt</Badge>}
-                    {s.state === "viewed" && <Badge>Viewed</Badge>}
+                    {s.state === "finished" && <Badge tone="accent">Finished reading</Badge>}
+                    {s.state === "viewed" && <Badge>{s.percent ? `Reading, ${s.percent}%` : "Opened"}</Badge>}
                     {s.state === "none" && <Badge tone="amber">Not yet</Badge>}
                   </Td>
                   <Td className="text-right">

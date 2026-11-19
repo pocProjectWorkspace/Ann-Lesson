@@ -79,9 +79,9 @@ export type User = {
   school: { id: string; name: string; code: string } | null;
   class: { id: string; name: string } | null;
 };
-export type ProgressState = "none" | "viewed" | "learnt" | "confirmed";
-export type LessonSummary = { id: string; title: string; description: string | null; fileCount: number; viewed: boolean; learnt: boolean; confirmed?: boolean; state: ProgressState };
-export type SubjectSummary = { id: string; name: string; lessonCount: number; learntCount: number; lessons: LessonSummary[] };
+export type ProgressState = "none" | "viewed" | "finished" | "learnt" | "confirmed";
+export type LessonSummary = { id: string; title: string; description: string | null; fileCount: number; viewed: boolean; learnt: boolean; confirmed?: boolean; finished?: boolean; percent?: number; lastPage?: number; pageCount?: number | null; state: ProgressState };
+export type SubjectSummary = { id: string; name: string; lessonCount: number; learntCount: number; readPercent?: number; lessons: LessonSummary[] };
 export type SubjectDetail = SubjectSummary & { class: { id: string; name: string } };
 export type StudentHome = { role: "STUDENT"; class: { id: string; name: string; academicYear: string | null } | null; totals: { lessons: number; learnt: number }; continueLessonId: string | null; subjects: SubjectSummary[] };
 export type ClassSummary = { id: string; name: string; academicYear: string | null; studentCount: number; subjectCount: number; lessonCount: number; learntPercent: number };
@@ -102,9 +102,9 @@ export type LessonBase = {
   prevLessonId: string | null;
   nextLessonId: string | null;
 };
-export type Progress = { viewed: boolean; learnt: boolean; learntAt: string | null; lastViewedAt: string | null; confirmedAt?: string | null };
+export type Progress = { viewed: boolean; learnt: boolean; learntAt: string | null; lastViewedAt: string | null; confirmedAt?: string | null; finished?: boolean; percent?: number; lastPage?: number; pageCount?: number | null };
 export type StudentLesson = LessonBase & { progress: Progress };
-export type TeacherLessonDetail = LessonBase & { students: { id: string; name: string; username: string; viewedAt: string | null; learntAt: string | null; confirmedAt?: string | null }[] };
+export type TeacherLessonDetail = LessonBase & { students: { id: string; name: string; username: string; viewedAt: string | null; learntAt: string | null; confirmedAt?: string | null; finishedAt?: string | null; percent?: number }[] };
 export type NotificationItem = { id: string; title: string; body: string | null; href: string | null; createdAt: string; readAt: string | null };
 
 /* ---------- Calls ---------- */

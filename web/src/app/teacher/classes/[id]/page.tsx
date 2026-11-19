@@ -40,7 +40,7 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
                         <span className="min-w-0">
                           <span className="block truncate font-semibold text-ink-900">{l.title}</span>
                           <span className="block text-xs text-ink-500">
-                            {l.viewedCount} viewed, {l.learntCount} learnt, {l.confirmedCount} confirmed
+                            {l.viewedCount} opened, {l.finishedCount} finished reading, {l.learntCount} learnt, {l.confirmedCount} confirmed · {l.readPercent}% read on average
                           </span>
                         </span>
                         <ProgressBar value={n ? (l.confirmedCount / n) * 100 : 0} label={`${l.title} confirmed`} />

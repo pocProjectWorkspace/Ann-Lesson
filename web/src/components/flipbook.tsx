@@ -20,6 +20,17 @@ function stampWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, tex
 
 type Status = { kind: "opening" } | { kind: "book"; total: number; rendered: number } | { kind: "error"; message: string };
 
+/**
+ * Optional reading-progress tracking: the viewer opens at `startPage` (1-based) and
+ * reports the page reached to the position endpoint as the reader turns pages. `token`
+ * is the web-view hand-off token for the mobile app, which has no session cookie.
+ */
+export type ReadingTrack = { lessonId: string; startPage?: number; token?: string };
+
+function positionUrl(track: ReadingTrack) {
+  return `/api/mobile/lessons/${track.lessonId}/position${track.token ? `?t=${encodeURIComponent(track.token)}` : ""}`;
+}
+
 /** Pages to draw first, relative to the one the reader is on: this spread, then ahead, then behind, then the rest. */
 function renderOrder(current: number, total: number): number[] {
   const seen = new Set<number>();
@@ -57,11 +68,66 @@ function targetWidth() {
  * 3. Pages are rasterised one at a time, starting from the spread the reader is on and
  *    working outwards, and each image is swapped into its placeholder as it finishes.
  *    Turning the page re-prioritises the queue, so the reader rarely sees a placeholder.
+ * 4. With `track`, the viewer opens at the student's last page and reports the page
+ *    reached as they read, so the dashboard shows a percentage and "Continue reading"
+ *    resumes in the right place.
  */
-export function Flipbook({ src, title, watermark }: { src: string; title: string; watermark?: string }) {
+export function Flipbook({ src, title, watermark, track, onProgress }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void }) {
   const bookRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlip | null>(null);
   const currentRef = useRef(0);
+  // Latest props, readable from the long-lived render loop and event handlers.
+  const trackRef = useRef(track);
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => {
+    trackRef.current = track;
+    onProgressRef.current = onProgress;
+  });
+
+  // Debounced reporter: the latest page wins, and anything pending is flushed when the
+  // tab is hidden or the component goes away (sendBeacon survives page unloads).
+  const pending = useRef<{ page: number; pageCount: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const report = useCallback((page: number, pageCount: number, immediate = false) => {
+    const t = trackRef.current;
+    if (!t) return;
+    pending.current = { page, pageCount };
+    const send = async () => {
+      const body = pending.current;
+      pending.current = null;
+      if (!body) return;
+      try {
+        const res = await fetch(positionUrl(t), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true });
+        if (res.ok) {
+          const data = (await res.json()) as { percent: number; finished: boolean };
+          onProgressRef.current?.({ page: body.page, pageCount: body.pageCount, percent: data.percent, finished: data.finished });
+        }
+      } catch {
+        /* offline or navigating away; the next turn will report again */
+      }
+    };
+    if (timer.current) clearTimeout(timer.current);
+    if (immediate) void send();
+    else timer.current = setTimeout(send, 1200);
+  }, []);
+  useEffect(() => {
+    const flush = () => {
+      const t = trackRef.current;
+      const body = pending.current;
+      if (!t || !body) return;
+      pending.current = null;
+      if (timer.current) clearTimeout(timer.current);
+      navigator.sendBeacon?.(positionUrl(t), new Blob([JSON.stringify(body)], { type: "application/json" }));
+    };
+    const onHide = () => document.visibilityState === "hidden" && flush();
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, []);
   const [status, setStatus] = useState<Status>({ kind: "opening" });
   const [ratio, setRatio] = useState(1.414); // height / width of a page
   const [current, setCurrent] = useState(0);
@@ -154,12 +220,25 @@ export function Flipbook({ src, title, watermark }: { src: string; title: string
         showPageCorners: true,
       });
       flip.loadFromHTML(nodes);
+      // The furthest page visible for a given index: in a two-page spread the right-hand
+      // page (odd index + 1); on a phone, or on the cover and back, the index itself.
+      const reached = (idx: number) => Math.min(total, (flip && flip.getOrientation() === "portrait" ? idx : idx % 2 === 1 ? idx + 1 : idx) + 1);
       flip.on("flip", (e) => {
         const idx = Number(e.data);
         currentRef.current = idx;
         setCurrent(idx);
         wake?.(); // re-prioritise the render queue around the new page
+        report(reached(idx), total);
       });
+      // Resume where the reader left off, and record the page count straight away so the
+      // dashboard can show a percentage even before the first page turn.
+      const start = Math.min(Math.max((trackRef.current?.startPage ?? 1) - 1, 0), total - 1);
+      if (start > 0) {
+        flip.turnToPage(start);
+        currentRef.current = start;
+        setCurrent(start);
+      }
+      report(reached(start), total);
       flip.on("changeOrientation", (e: { data: string }) => setIsPortrait(e.data === "portrait"));
       setIsPortrait(flip.getOrientation() === "portrait");
       flipRef.current = flip;
@@ -232,7 +311,7 @@ export function Flipbook({ src, title, watermark }: { src: string; title: string
       flipRef.current = null;
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [doc, status.kind, ratio, watermark]);
+  }, [doc, status.kind, ratio, watermark, report]);
 
   const prev = useCallback(() => flipRef.current?.flipPrev(), []);
   const next = useCallback(() => flipRef.current?.flipNext(), []);
