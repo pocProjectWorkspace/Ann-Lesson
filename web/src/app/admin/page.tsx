@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { planLabel } from "@/lib/plans";
-import { Badge, Card, Empty, Field, Input, LinkButton, PageHeader, Select, Stat, Table, Td } from "@/components/ui";
+import { Alert, Badge, Card, Empty, Field, Input, LinkButton, PageHeader, Select, Stat, Table, Td } from "@/components/ui";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { listParams, Pagination, SearchBox } from "@/components/list-controls";
 import { createSchool, toggleSchoolActive } from "./actions";
@@ -11,7 +11,9 @@ import { now } from "@/lib/time";
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireRole("SUPER_ADMIN");
-  const { q, page, skip, take } = listParams(await searchParams, 25);
+  const params = await searchParams;
+  const { q, page, skip, take } = listParams(params, 25);
+  const deleted = params.deleted;
   const where = q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { code: { contains: q, mode: "insensitive" as const } }] } : {};
   const [schools, total, allSchools] = await Promise.all([
     db.school.findMany({ where, orderBy: { createdAt: "desc" }, skip, take, include: { _count: { select: { classes: true, lessons: true } }, users: { select: { role: true } } } }),
@@ -25,6 +27,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
+      {deleted ? <div className="mb-4"><Alert kind="success">Deleted school {deleted}.</Alert></div> : null}
       <PageHeader
         title="Schools"
         subtitle="Each school is its own space, with its own admin, teachers, students and syllabus."

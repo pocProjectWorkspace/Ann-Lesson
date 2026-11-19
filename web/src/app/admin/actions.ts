@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, requireRole, revokeSchoolSessions, revokeUserSessions } from "@/lib/auth";
@@ -65,6 +66,52 @@ export async function toggleSchoolActive(formData: FormData) {
   await audit(session, { schoolId: id, action: school.isActive ? "school.deactivate" : "school.activate", targetType: "School", targetId: id, summary: `${school.isActive ? "Deactivated" : "Activated"} ${school.name}` });
   revalidatePath("/admin");
   revalidatePath(`/admin/schools/${id}`);
+}
+
+/**
+ * What still ties a school to data. A school can be deleted only when every
+ * count is zero; school admins and settled invoices do not block deletion.
+ */
+export async function schoolDeleteBlockers(schoolId: string) {
+  const [classes, subjects, lessons, files, teachers, students, unpaidInvoices] = await Promise.all([
+    db.class.count({ where: { schoolId } }),
+    db.subject.count({ where: { schoolId } }),
+    db.lesson.count({ where: { schoolId } }),
+    db.lessonFile.count({ where: { schoolId } }),
+    db.user.count({ where: { schoolId, role: "TEACHER" } }),
+    db.user.count({ where: { schoolId, role: "STUDENT" } }),
+    db.invoice.count({ where: { schoolId, paidAt: null } }),
+  ]);
+  const items = [
+    [classes, "class", "classes"],
+    [subjects, "subject", "subjects"],
+    [lessons, "lesson", "lessons"],
+    [files, "PDF", "PDFs"],
+    [teachers, "teacher", "teachers"],
+    [students, "student", "students"],
+    [unpaidInvoices, "unpaid invoice", "unpaid invoices"],
+  ] as const;
+  return items.filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+}
+
+/** Owner only. Removes an empty school (no classes, teachers, students, lessons, PDFs or unpaid invoices) together with its admin accounts and audit history. */
+export async function deleteSchool(formData: FormData) {
+  const session = await requireRole("SUPER_ADMIN");
+  const id = String(formData.get("id") ?? "");
+  const school = await db.school.findUnique({ where: { id }, select: { id: true, name: true, code: true } });
+  if (!school) return;
+  const blockers = await schoolDeleteBlockers(id);
+  if (blockers.length > 0) {
+    // The page hides the button in this case; refuse quietly if it is called anyway.
+    revalidatePath(`/admin/schools/${id}`);
+    return;
+  }
+  await revokeSchoolSessions(id);
+  // Cascades remove the school admins, paid invoices and the school's own audit rows.
+  await db.school.delete({ where: { id } });
+  await audit(session, { schoolId: null, action: "school.delete", targetType: "School", targetId: id, summary: `Deleted empty school ${school.name} (${school.code})` });
+  revalidatePath("/admin");
+  redirect("/admin?deleted=" + encodeURIComponent(school.name));
 }
 
 const planSchema = z.object({

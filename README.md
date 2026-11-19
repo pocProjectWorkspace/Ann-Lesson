@@ -161,6 +161,11 @@ web/
   Only school admins and the platform owner can download. This deters sharing; it is
   not DRM.
 
+## Platform owner
+
+- Creates schools with a plan, raises invoices, activates or deactivates a school, and adds admins.
+- **Delete school** appears on a school's page only while it is empty: no classes, subjects, lessons, PDFs, teachers, students or unpaid invoices. Deleting removes the school, its admin accounts and settled invoices, and is recorded in the owner's activity log. A school with data must be emptied first, or deactivated instead.
+
 ## School administration features
 
 - **Edit anything.** Classes, subjects and lessons have edit forms. A lesson can be moved to another subject or class.

@@ -5,7 +5,7 @@ import { planStatus, PLANS, planKeys } from "@/lib/plans";
 import { Badge, Card, Empty, Field, Input, PageHeader, Select, Stat, Table, Td, Textarea } from "@/components/ui";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { AuditTable } from "@/components/audit-table";
-import { addSchoolAdmin, applyPlanPreset, createInvoice, deleteInvoice, markInvoicePaid, resetUserPassword, toggleSchoolActive, toggleUserActive, updateSchoolPlan } from "../../actions";
+import { addSchoolAdmin, applyPlanPreset, createInvoice, deleteInvoice, deleteSchool, markInvoicePaid, resetUserPassword, schoolDeleteBlockers, toggleSchoolActive, toggleUserActive, updateSchoolPlan } from "../../actions";
 import { formatDate } from "@/lib/utils";
 import { daysFromNow, now } from "@/lib/time";
 
@@ -32,6 +32,7 @@ export default async function SchoolDetail({ params }: { params: Promise<{ id: s
   });
   if (!school) notFound();
   const status = await planStatus(school);
+  const blockers = await schoolDeleteBlockers(school.id);
   const admins = school.users;
   const in30 = daysFromNow(30);
 
@@ -45,6 +46,11 @@ export default async function SchoolDetail({ params }: { params: Promise<{ id: s
           <>
             {school.isActive ? <Badge tone="green">Active</Badge> : <Badge tone="red">Inactive</Badge>}
             <InlineAction action={toggleSchoolActive} hidden={{ id: school.id }} label={school.isActive ? "Deactivate school" : "Activate school"} variant={school.isActive ? "danger" : "primary"} confirm={school.isActive ? `Deactivate ${school.name}?` : undefined} />
+            {blockers.length === 0 ? (
+              <InlineAction action={deleteSchool} hidden={{ id: school.id }} label="Delete school" variant="danger" confirm={`Delete ${school.name} (${school.code}) and its ${admins.length === 1 ? "admin account" : `${admins.length} admin accounts`}? This cannot be undone.`} />
+            ) : (
+              <span className="text-xs text-ink-500" title="Only an empty school can be deleted">Cannot delete: has {blockers.join(", ")}</span>
+            )}
           </>
         }
       />
