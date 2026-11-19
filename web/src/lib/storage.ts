@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readFile, unlink } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { copyFile, mkdir, readFile, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -104,6 +104,21 @@ export async function signedUrl(key: string, fileName: string, disposition: "inl
 /** Local driver only: read the bytes to stream through the API route. */
 export async function readLocal(key: string) {
   return readFile(path.join(uploadDir, key));
+}
+
+/** Local driver only: size of a stored object, or null when it is missing. */
+export async function statLocal(key: string) {
+  try {
+    return (await stat(path.join(uploadDir, key))).size;
+  } catch {
+    return null;
+  }
+}
+
+/** Local driver only: a web stream over [start, end] (inclusive) of a stored object. */
+export function readLocalRange(key: string, start: number, end: number): ReadableStream<Uint8Array> {
+  const node = createReadStream(path.join(uploadDir, key), { start, end });
+  return Readable.toWeb(node) as ReadableStream<Uint8Array>;
 }
 
 export const storageDriver = driver;

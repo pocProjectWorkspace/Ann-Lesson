@@ -77,29 +77,20 @@ Change both before deploying.
 
 ## Book-style PDF viewer
 
-Lesson PDFs open in a page-turning book view by default. Pages are rendered in
-the browser with pdf.js and animated by page-flip as a two-page spread on wide
-screens and a single page on phones. Turn pages by dragging a corner, clicking
-a page edge, pressing the arrow keys, or using the Previous / Next buttons.
-A "Scroll" tab switches to the browser's built-in PDF viewer, which is handier
-for printing or very long files. The choice is remembered per browser.
+Lessons open as a page-turning book (pdf.js renders pages to images, page-flip
+animates them). Large scanned books open fast because nothing waits for the whole
+file:
 
-The pdf.js worker is copied to `web/public/pdf.worker.min.mjs` by the
-`postinstall` script. If PDFs fail to open as a book after a fresh clone, run
-`node scripts/copy-pdf-worker.mjs`.
-
-### Demo data (kindergarten)
-
-```bash
-cd web
-npm run seed:demo        # Nursery A, LKG A, UKG A in every active school, with subjects, teachers and students
-npm run seed:sample      # one generated lesson with a PDF ("Letter A: Apple") so the book viewer has something to show
-npm run reset:kindergarten   # start over: removes all classes, lessons, PDFs and students, keeps admins and teachers, re-seeds
-```
-
-Each kindergarten class gets the subjects English, Numbers, General Awareness, Rhymes & Stories
-and Art & Craft, with no lessons. The school uploads its own lesson PDFs from Classes & syllabus.
-Student password `Learn1234`, teacher password `Teach1234`. All seeds skip what already exists.
+- The PDF is opened with HTTP range requests, so only the bytes a page needs are
+  downloaded. R2/S3 signed URLs serve ranges natively; the local driver streams
+  ranges from disk (`/api/files/[id]` answers `Range` and `HEAD`).
+- The book is mounted immediately with a placeholder per page. Pages are rendered
+  one at a time starting from the spread the reader is on and working outwards, and
+  turning the page re-prioritises the queue. A 370 MB, 106-page scan shows its cover
+  in about 10 seconds and keeps rendering in the background.
+- Rendered pages are JPEG blobs (1200 px wide on desktop, 800 px on phones), so
+  memory stays modest even for long books.
+- Students and teachers see a name watermark on every page and have no download.
 
 ## Configuration (`web/.env`)
 

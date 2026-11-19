@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
-import { readLocal, signedUrl } from "@/lib/storage";
+import { readLocalRange, signedUrl, statLocal } from "@/lib/storage";
 
 /**
  * Serves a lesson PDF to an authorised user.
@@ -51,16 +51,35 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const url = await signedUrl(file.storageKey, file.fileName, disposition);
   if (url) return NextResponse.redirect(url, 302);
 
-  const bytes = await readLocal(file.storageKey);
-  return new NextResponse(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": isPdf ? "application/pdf" : "application/octet-stream",
-      "Content-Length": String(bytes.byteLength),
-      "Content-Disposition": `${disposition}; filename="${encodeURIComponent(file.fileName)}"`,
-      "Content-Security-Policy": "sandbox; default-src 'none'",
-      "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-      "X-Robots-Tag": "noindex",
-    },
-  });
+  // Local driver: stream from disk and honour Range requests, so the book viewer can
+  // fetch the first pages of a large PDF without downloading the whole file first.
+  const size = await statLocal(file.storageKey);
+  if (size === null) return new NextResponse("File missing from storage", { status: 404 });
+  const headers: Record<string, string> = {
+    "Content-Type": isPdf ? "application/pdf" : "application/octet-stream",
+    "Content-Disposition": `${disposition}; filename="${encodeURIComponent(file.fileName)}"`,
+    "Content-Security-Policy": "sandbox; default-src 'none'",
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "noindex",
+    "Accept-Ranges": "bytes",
+  };
+  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") ?? "");
+  if (range && (range[1] || range[2])) {
+    // "bytes=a-b", "bytes=a-" (to the end) or "bytes=-n" (last n bytes).
+    const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+    const end = Math.min(range[1] && range[2] ? Number(range[2]) : size - 1, size - 1);
+    if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
+      return new NextResponse(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+    }
+    return new NextResponse(readLocalRange(file.storageKey, start, end), {
+      status: 206,
+      headers: { ...headers, "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1) },
+    });
+  }
+  if (req.method === "HEAD") return new NextResponse(null, { headers: { ...headers, "Content-Length": String(size) } });
+  return new NextResponse(readLocalRange(file.storageKey, 0, size - 1), { headers: { ...headers, "Content-Length": String(size) } });
 }
+
+/** pdf.js probes with HEAD before asking for ranges; same checks and headers as GET. */
+export const HEAD = GET;
