@@ -45,7 +45,7 @@ export default async function SubjectDetail({ params }: { params: Promise<{ id: 
                       <span>{l._count.progress} student{l._count.progress === 1 ? "" : "s"} opened</span>
                     </div>
                   </div>
-                  {l._count.files === 0 ? <Badge tone="amber">No PDF</Badge> : <Badge tone="green">{l._count.files} PDF{l._count.files === 1 ? "" : "s"}</Badge>}
+                  {l._count.files === 0 ? <Badge tone="amber">No PDF</Badge> : l.publishedAt ? <Badge tone="green">Published, {l._count.files} PDF{l._count.files === 1 ? "" : "s"}</Badge> : <Badge tone="amber">Draft, {l._count.files} PDF{l._count.files === 1 ? "" : "s"}</Badge>}
                   <div className="flex items-center gap-0.5" aria-label={`Reorder ${l.title}`}>
                     <InlineAction action={reorderLesson} hidden={{ id: l.id, direction: "up" }} label="↑" ariaLabel={`Move ${l.title} up`} />
                     <InlineAction action={reorderLesson} hidden={{ id: l.id, direction: "down" }} label="↓" ariaLabel={`Move ${l.title} down`} />

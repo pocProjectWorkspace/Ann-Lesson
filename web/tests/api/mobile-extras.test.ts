@@ -23,7 +23,7 @@ describe("subject endpoint", () => {
     expect(r.status).toBe(200);
     expect(r.data?.id).toBe(subjectId);
     expect(r.data?.lessonCount).toBeGreaterThan(0);
-    expect(["none", "viewed", "learnt", "confirmed"]).toContain(r.data!.lessons[0].state);
+    expect(["none", "viewed", "finished", "learnt", "confirmed"]).toContain(r.data!.lessons[0].state);
   });
   it("is hidden from teachers and other schools", async () => {
     expect((await api(`/api/mobile/subjects/${subjectId}`, { token: teacher })).status).toBe(403);

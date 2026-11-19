@@ -49,7 +49,7 @@ export default function ClassScreen() {
                       <ProgressBar value={cls.studentCount ? (l.confirmedCount / cls.studentCount) * 100 : 0} />
                     </View>
                   </View>
-                  {l.fileCount === 0 ? <Badge tone="amber">No PDF</Badge> : null}
+                  {l.fileCount === 0 ? <Badge tone="amber">No PDF</Badge> : l.published === false ? <Badge tone="amber">Draft</Badge> : null}
                 </Pressable>
               ))
             )}

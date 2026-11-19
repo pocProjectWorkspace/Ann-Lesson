@@ -44,7 +44,7 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
                           </span>
                         </span>
                         <ProgressBar value={n ? (l.confirmedCount / n) * 100 : 0} label={`${l.title} confirmed`} />
-                        <span className="sm:text-right">{l.fileCount === 0 ? <Badge tone="amber">No PDF</Badge> : <Badge tone="slate">{n ? Math.round((l.confirmedCount / n) * 100) : 0}% confirmed</Badge>}</span>
+                        <span className="sm:text-right">{l.fileCount === 0 ? <Badge tone="amber">No PDF</Badge> : !l.published ? <Badge tone="amber">Draft, not yet published</Badge> : <Badge tone="slate">{n ? Math.round((l.confirmedCount / n) * 100) : 0}% confirmed</Badge>}</span>
                       </Link>
                     </li>
                   ))}

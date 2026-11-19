@@ -26,7 +26,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
       <PageHeader
         crumbs={[{ href: "/teacher", label: "My classes" }, { href: `/teacher/classes/${lesson.class.id}`, label: lesson.class.name }, { label: lesson.subject.name }]}
         title={lesson.title}
-        subtitle={lesson.description ?? undefined}
+        subtitle={lesson.published ? (lesson.description ?? undefined) : `Draft, not yet published to students${lesson.description ? `. ${lesson.description}` : ""}`}
         actions={<LinkButton href={`/api/exports/progress.csv?classId=${lesson.class.id}`}>Export class progress</LinkButton>}
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">

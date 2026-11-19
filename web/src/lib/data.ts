@@ -37,6 +37,8 @@ function ownProgress(p: (ProgressRow & { lastViewedAt?: Date }) | null | undefin
 const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
 
 const lessonOrder = [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }];
+/** What a student may see: the admin has published it and it still has a PDF. */
+const visibleToStudents = { publishedAt: { not: null }, files: { some: {} } } as const;
 const subjectOrder = [{ sortOrder: "asc" as const }, { name: "asc" as const }];
 
 /* ---------------- Student ---------------- */
@@ -52,7 +54,7 @@ export async function studentHome(userId: string) {
             orderBy: subjectOrder,
             include: {
               lessons: {
-                where: { files: { some: {} } },
+                where: visibleToStudents,
                 orderBy: lessonOrder,
                 include: { _count: { select: { files: true } }, progress: { where: { studentId: userId } } },
               },
@@ -90,7 +92,7 @@ export async function studentSubject(userId: string, subjectId: string) {
   if (!me?.classId) return null;
   const subject = await db.subject.findFirst({
     where: { id: subjectId, classId: me.classId },
-    include: { class: true, lessons: { where: { files: { some: {} } }, orderBy: lessonOrder, include: { progress: { where: { studentId: userId } }, _count: { select: { files: true } } } } },
+    include: { class: true, lessons: { where: visibleToStudents, orderBy: lessonOrder, include: { progress: { where: { studentId: userId } }, _count: { select: { files: true } } } } },
   });
   if (!subject) return null;
   const lessons = subject.lessons.map((l) => {
@@ -152,6 +154,7 @@ export async function teacherClass(teacherId: string, classId: string) {
         title: l.title,
         description: l.description,
         fileCount: l._count.files,
+        published: !!l.publishedAt,
         viewedCount: l._count.progress,
         finishedCount: l.progress.filter((p) => p.finishedAt || p.learntAt || p.confirmedAt).length,
         learntCount: l.progress.filter((p) => p.learntAt).length,
@@ -183,7 +186,8 @@ export async function lessonForUser(user: { id: string; role: "STUDENT" | "TEACH
     const teaches = await db.teacherAssignment.findFirst({ where: { teacherId: user.id, classId: cls.id }, select: { id: true } });
     if (!teaches) return null;
   }
-  const siblings = await db.lesson.findMany({ where: { subjectId: lesson.subjectId, ...(user.role === "STUDENT" ? { files: { some: {} } } : {}) }, orderBy: lessonOrder, select: { id: true, title: true } });
+  if (user.role === "STUDENT" && (!lesson.publishedAt || lesson.files.length === 0)) return null; // drafts are staff-only
+  const siblings = await db.lesson.findMany({ where: { subjectId: lesson.subjectId, ...(user.role === "STUDENT" ? visibleToStudents : {}) }, orderBy: lessonOrder, select: { id: true, title: true } });
   const idx = siblings.findIndex((l) => l.id === lesson.id);
   const byStudent = new Map(lesson.progress.map((p) => [p.studentId, p]));
   const own = byStudent.get(user.id) ?? null;
@@ -191,6 +195,7 @@ export async function lessonForUser(user: { id: string; role: "STUDENT" | "TEACH
     id: lesson.id,
     title: lesson.title,
     description: lesson.description,
+    published: !!lesson.publishedAt,
     subject: { id: lesson.subjectId, name: lesson.subject.name },
     class: { id: cls.id, name: className(cls) },
     files: lesson.files,

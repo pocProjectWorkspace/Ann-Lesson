@@ -208,6 +208,14 @@ the route; a 300 MB book would then exceed a small container's memory. The route
 own Origin, session and role checks and streams the body to storage in 8 MB parts, so a
 380 MB upload peaks at under 200 MB of server memory.
 
+## Draft and publish
+
+A lesson is a draft until the school admin publishes it. Drafts are visible to admins and
+teachers (marked as such) but not to students, and nothing is sent to anyone on upload.
+Publishing needs at least one PDF, records an audit entry, and sends the "new lesson"
+notification to the class and its teachers. Unpublish hides the lesson again without losing
+progress. Lessons copied into a new class at year rollover keep their status.
+
 ## Reading progress
 
 Two things are tracked per student and lesson, and they are deliberately separate:

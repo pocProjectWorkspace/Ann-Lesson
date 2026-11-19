@@ -88,7 +88,7 @@ export type ClassSummary = { id: string; name: string; academicYear: string | nu
 export type TeacherHome = { role: "TEACHER"; classes: ClassSummary[] };
 export type Home = StudentHome | TeacherHome;
 
-export type TeacherLesson = { id: string; title: string; description: string | null; fileCount: number; viewedCount: number; learntCount: number; confirmedCount: number };
+export type TeacherLesson = { id: string; title: string; description: string | null; fileCount: number; published?: boolean; viewedCount: number; learntCount: number; confirmedCount: number };
 export type ClassDetail = { id: string; name: string; academicYear: string | null; studentCount: number; subjects: { id: string; name: string; lessons: TeacherLesson[] }[] };
 
 export type LessonFile = { id: string; fileName: string; sizeBytes: number; url: string; viewerPath: string };

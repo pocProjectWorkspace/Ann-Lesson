@@ -8,7 +8,7 @@ import { hashPassword, requireSchoolRole, revokeUserSessions, type Session } fro
 import { copyObject, deleteObject, makeKey } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import { assertWithinPlan, PlanLimitError } from "@/lib/plans";
-import { notifyUsers, removeNotificationsFor } from "@/lib/notify";
+import { notifyLessonPublished, notifyUsers, removeNotificationsFor } from "@/lib/notify";
 import { columnIndex, parseCsv } from "@/lib/csv";
 import { className } from "@/lib/data";
 import type { ActionState } from "@/lib/utils";
@@ -319,7 +319,7 @@ export async function promoteClass(_prev: ActionState, formData: FormData): Prom
     for (const s of source.subjects) {
       const subject = await db.subject.create({ data: { schoolId, classId: target.id, name: s.name, sortOrder: s.sortOrder } });
       for (const l of s.lessons) {
-        const lesson = await db.lesson.create({ data: { schoolId, subjectId: subject.id, title: l.title, description: l.description, sortOrder: l.sortOrder } });
+        const lesson = await db.lesson.create({ data: { schoolId, subjectId: subject.id, title: l.title, description: l.description, sortOrder: l.sortOrder, publishedAt: l.publishedAt } });
         for (const f of l.files) {
           const key = makeKey(schoolId, lesson.id, f.fileName);
           await copyObject(f.storageKey, key);
@@ -453,6 +453,26 @@ export async function deleteLesson(formData: FormData) {
 }
 
 /* ---------------- Lesson files ---------------- */
+
+/**
+ * Publish makes a lesson visible to its class and notifies students and teachers; it
+ * needs at least one PDF. Unpublish hides it again (progress is kept).
+ */
+export async function publishLesson(formData: FormData) {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const id = String(formData.get("id") ?? "");
+  const publish = String(formData.get("publish") ?? "yes") === "yes";
+  const lesson = await db.lesson.findFirst({ where: { id, schoolId: session.schoolId }, include: { _count: { select: { files: true } }, subject: { select: { name: true } } } });
+  if (!lesson) return;
+  if (publish && lesson._count.files === 0) return; // the page hides the button in this case
+  if (publish === !!lesson.publishedAt) return;
+  await db.lesson.update({ where: { id }, data: { publishedAt: publish ? new Date() : null } });
+  await audit(session, { action: publish ? "lesson.publish" : "lesson.unpublish", targetType: "Lesson", targetId: id, summary: `${publish ? "Published" : "Unpublished"} "${lesson.title}" in ${lesson.subject.name}` });
+  if (publish) await notifyLessonPublished(id);
+  revalidatePath(`/school/lessons/${id}`);
+  revalidatePath(`/school/subjects/${lesson.subjectId}`);
+  revalidatePath("/school");
+}
 
 export async function deleteLessonFile(formData: FormData) {
   const session = await requireSchoolRole("SCHOOL_ADMIN");

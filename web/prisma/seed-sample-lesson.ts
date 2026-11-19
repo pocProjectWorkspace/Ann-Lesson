@@ -42,7 +42,8 @@ async function main() {
     subject ??= await prisma.subject.create({ data: { schoolId: school.id, classId: cls.id, name: "English", sortOrder: 0 } });
     const title = "Letter A: Apple";
     let lesson = await prisma.lesson.findFirst({ where: { subjectId: subject.id, title } });
-    lesson ??= await prisma.lesson.create({ data: { schoolId: school.id, subjectId: subject.id, title, description: "Say it, trace it, find it", sortOrder: 0 } });
+    lesson ??= await prisma.lesson.create({ data: { schoolId: school.id, subjectId: subject.id, title, description: "Say it, trace it, find it", sortOrder: 0, publishedAt: new Date() } });
+    if (!lesson.publishedAt) lesson = await prisma.lesson.update({ where: { id: lesson.id }, data: { publishedAt: new Date() } });
     const fileName = "letter-a-apple.pdf";
     if (await prisma.lessonFile.findFirst({ where: { lessonId: lesson.id, fileName } })) {
       console.log(`${school.name}: sample lesson already present`);

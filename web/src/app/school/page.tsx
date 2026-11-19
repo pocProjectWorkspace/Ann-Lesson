@@ -5,7 +5,7 @@ import { Card, Empty, LinkButton, PageHeader, Stat, Table, Td } from "@/componen
 
 export default async function SchoolHome() {
   const { schoolId } = await requireSchoolRole("SCHOOL_ADMIN");
-  const [school, teachers, students, classes, lessons, lessonsWithoutPdf] = await Promise.all([
+  const [school, teachers, students, classes, lessons, lessonsWithoutPdf, drafts] = await Promise.all([
     db.school.findUniqueOrThrow({ where: { id: schoolId } }),
     db.user.count({ where: { schoolId, role: "TEACHER" } }),
     db.user.count({ where: { schoolId, role: "STUDENT" } }),
@@ -16,6 +16,7 @@ export default async function SchoolHome() {
     }),
     db.lesson.count({ where: { schoolId } }),
     db.lesson.count({ where: { schoolId, files: { none: {} } } }),
+    db.lesson.count({ where: { schoolId, publishedAt: null, files: { some: {} } } }),
   ]);
 
   const steps = [
@@ -38,7 +39,7 @@ export default async function SchoolHome() {
         <Stat label="Classes" value={classes.length} />
         <Stat label="Teachers" value={teachers} />
         <Stat label="Students" value={students} />
-        <Stat label="Lessons" value={lessons} hint={lessonsWithoutPdf ? `${lessonsWithoutPdf} still need a PDF` : undefined} />
+        <Stat label="Lessons" value={lessons} hint={[lessonsWithoutPdf ? `${lessonsWithoutPdf} still need a PDF` : "", drafts ? `${drafts} draft${drafts === 1 ? "" : "s"} to review and publish` : ""].filter(Boolean).join(", ") || undefined} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">

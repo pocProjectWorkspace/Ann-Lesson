@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { requireSchoolRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Card, Empty, Field, Input, PageHeader, Select, Table, Td, Textarea } from "@/components/ui";
+import { Badge, Card, Empty, Field, Input, PageHeader, Select, Table, Td, Textarea } from "@/components/ui";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { LessonUploadForm } from "@/components/upload-form";
-import { deleteLesson, deleteLessonFile, updateLesson } from "../../actions";
+import { deleteLesson, deleteLessonFile, publishLesson, updateLesson } from "../../actions";
 import { formatBytes, formatDate } from "@/lib/utils";
 
 export default async function LessonDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ file?: string }> }) {
@@ -29,14 +29,24 @@ export default async function LessonDetail({ params, searchParams }: { params: P
         ]}
         title={lesson.title}
         subtitle={lesson.description ?? undefined}
-        actions={<InlineAction action={deleteLesson} hidden={{ id: lesson.id }} label="Delete lesson" variant="danger" confirm={`Delete "${lesson.title}" and its PDFs?`} />}
+        actions={
+          <>
+            {lesson.publishedAt ? <Badge tone="green">Published {formatDate(lesson.publishedAt)}</Badge> : <Badge tone="amber">Draft, hidden from students</Badge>}
+            {lesson.publishedAt ? (
+              <InlineAction action={publishLesson} hidden={{ id: lesson.id, publish: "no" }} label="Unpublish" variant="secondary" confirm={`Hide "${lesson.title}" from students again?`} />
+            ) : lesson.files.length > 0 ? (
+              <InlineAction action={publishLesson} hidden={{ id: lesson.id, publish: "yes" }} label="Publish to students" variant="primary" confirm={`Publish "${lesson.title}" to ${classTitle}? Students and teachers will be notified.`} />
+            ) : null}
+            <InlineAction action={deleteLesson} hidden={{ id: lesson.id }} label="Delete lesson" variant="danger" confirm={`Delete "${lesson.title}" and its PDFs?`} />
+          </>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card title={`PDF files (${lesson.files.length})`}>
             {lesson.files.length === 0 ? (
-              <Empty>No PDF uploaded yet. Students will not see this lesson, and will be notified when the first PDF arrives.</Empty>
+              <Empty>No PDF uploaded yet. Upload the book, check it opens below, then publish the lesson so students can see it.</Empty>
             ) : (
               <Table head={["File", "Size", "Uploaded", ""]}>
                 {lesson.files.map((f) => (
@@ -56,6 +66,7 @@ export default async function LessonDetail({ params, searchParams }: { params: P
               </Table>
             )}
           </Card>
+          {current && !lesson.publishedAt && <p className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Review the book below. When it looks right, use <strong>Publish to students</strong> at the top. Nobody is notified until then.</p>}
           {current && <PdfViewer fileId={current.id} title={current.fileName} />}
         </div>
 
