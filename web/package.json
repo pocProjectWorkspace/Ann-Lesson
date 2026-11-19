@@ -17,10 +17,11 @@
     "test:api": "vitest run tests/api --no-file-parallelism",
     "test:all": "npm run test && npm run test:api",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "check": "npm run lint && npm run typecheck && npm run test",
+    "check": "npm run check:tracked && npm run lint && npm run typecheck && npm run test",
     "secret": "node -e \"console.log(require('crypto').randomBytes(36).toString('base64url'))\"",
     "reset:kindergarten": "tsx prisma/reset-to-kindergarten.ts",
-    "seed:sample": "tsx prisma/seed-sample-lesson.ts"
+    "seed:sample": "tsx prisma/seed-sample-lesson.ts",
+    "check:tracked": "node scripts/check-tracked.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1170.0",
