@@ -77,4 +77,5 @@ jobs:
             out="${f%.ts}"; out="${out%.tsx}.js"
             docker run --rm --entrypoint sh lessonplan-web -c "test -f .next/server/app/$out" || { echo "missing in image: $out"; missing=1; }
           done
+          docker run --rm --entrypoint sh lessonplan-web -c "test -s public/pdf.worker.min.mjs" || { echo "missing in image: public/pdf.worker.min.mjs"; missing=1; }
           exit $missing

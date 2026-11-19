@@ -19,6 +19,9 @@ RUN npm ci
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# The pdf.js worker is git-ignored (postinstall copies it), so the repository's public/
+# folder copied above does not contain it. Copy it again here or the book viewer 404s.
+RUN node scripts/copy-pdf-worker.mjs
 ENV NEXT_TELEMETRY_DISABLED=1
 # A placeholder is enough for the build; real values come from the runtime environment.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
