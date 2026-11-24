@@ -17,7 +17,12 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
         crumbs={[{ href: "/teacher", label: "My classes" }, { label: cls.name }]}
         title={cls.name}
         subtitle={`${n} student${n === 1 ? "" : "s"}${cls.academicYear ? `, ${cls.academicYear}` : ""}`}
-        actions={<LinkButton href={`/api/exports/progress.csv?classId=${cls.id}`}>Export progress</LinkButton>}
+        actions={
+          <>
+            <LinkButton href={`/teacher/classes/${cls.id}/grades`} variant="primary">Grades and ranking</LinkButton>
+            <LinkButton href={`/api/exports/progress.csv?classId=${cls.id}`}>Export progress</LinkButton>
+          </>
+        }
       />
       {cls.subjects.length === 0 ? (
         <Empty>No subjects have been added to this class yet.</Empty>

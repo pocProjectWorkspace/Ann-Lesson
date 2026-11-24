@@ -23,6 +23,7 @@ export default function RootLayout() {
           <Stack.Screen name="home" options={{ title: "Lesson Plan" }} />
           <Stack.Screen name="subject/[id]" options={{ title: "Subject" }} />
           <Stack.Screen name="class/[id]" options={{ title: "Class" }} />
+          <Stack.Screen name="grades/[id]" options={{ title: "Grades" }} />
           <Stack.Screen name="lesson/[id]" options={{ title: "Lesson" }} />
           <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
           <Stack.Screen name="viewer/[fileId]" options={{ title: "Book", presentation: "fullScreenModal" }} />

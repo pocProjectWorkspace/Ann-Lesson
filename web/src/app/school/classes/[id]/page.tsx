@@ -41,6 +41,7 @@ export default async function ClassDetail({ params }: { params: Promise<{ id: st
         subtitle={cls.academicYear ? `Academic year ${cls.academicYear}` : undefined}
         actions={
           <>
+            <LinkButton href={`/school/classes/${cls.id}/grades`}>Grades and ranking</LinkButton>
             <LinkButton href={`/api/exports/progress.csv?classId=${cls.id}`}>Export progress</LinkButton>
             <InlineAction action={deleteClass} hidden={{ id: cls.id }} label="Delete class" variant="danger" confirm={`Delete ${title} with all its subjects, lessons and PDFs? Students in it will be left without a class.`} />
           </>

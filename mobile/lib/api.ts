@@ -83,7 +83,16 @@ export type ProgressState = "none" | "viewed" | "finished" | "learnt" | "confirm
 export type LessonSummary = { id: string; title: string; description: string | null; fileCount: number; viewed: boolean; learnt: boolean; confirmed?: boolean; finished?: boolean; percent?: number; lastPage?: number; pageCount?: number | null; state: ProgressState };
 export type SubjectSummary = { id: string; name: string; lessonCount: number; learntCount: number; readPercent?: number; lessons: LessonSummary[] };
 export type SubjectDetail = SubjectSummary & { class: { id: string; name: string } };
-export type StudentHome = { role: "STUDENT"; class: { id: string; name: string; academicYear: string | null } | null; totals: { lessons: number; learnt: number }; continueLessonId: string | null; subjects: SubjectSummary[] };
+export type StudentGrades = { subjects: { id: string; name: string; rating: number | null; label: string }[]; overall: number | null; rank: number | null; classSize: number; gradedStudents: number };
+export type StudentHome = { role: "STUDENT"; class: { id: string; name: string; academicYear: string | null } | null; totals: { lessons: number; learnt: number }; continueLessonId: string | null; subjects: SubjectSummary[]; grades?: StudentGrades | null };
+export type Gradebook = {
+  id: string;
+  name: string;
+  subjects: { id: string; name: string; average: number | null; gradedCount: number }[];
+  students: { id: string; name: string; username: string; ratings: { subjectId: string; rating: number | null }[]; overall: number | null; readPercent: number; rank: number | null }[];
+  classAverage: number | null;
+  gradedStudents: number;
+};
 export type ClassSummary = { id: string; name: string; academicYear: string | null; studentCount: number; subjectCount: number; lessonCount: number; learntPercent: number };
 export type TeacherHome = { role: "TEACHER"; classes: ClassSummary[] };
 export type Home = StudentHome | TeacherHome;
@@ -115,6 +124,8 @@ export const api = {
   me: () => request<User>("/api/mobile/me"),
   home: () => request<Home>("/api/mobile/home"),
   subject: (id: string) => request<SubjectDetail>(`/api/mobile/subjects/${id}`),
+  gradebook: (classId: string) => request<Gradebook>(`/api/mobile/classes/${classId}/grades`),
+  setGrade: (classId: string, studentId: string, subjectId: string, rating: number | null) => request<{ overall: number | null; rank: number | null }>(`/api/mobile/classes/${classId}/grades`, { method: "POST", body: JSON.stringify({ studentId, subjectId, rating }) }),
   classDetail: (id: string) => request<ClassDetail>(`/api/mobile/classes/${id}`),
   lesson: (id: string) => request<StudentLesson | TeacherLessonDetail>(`/api/mobile/lessons/${id}`),
   setLearnt: (id: string, learnt: boolean) => request<Progress>(`/api/mobile/lessons/${id}/learnt`, { method: "POST", body: JSON.stringify({ learnt }) }),

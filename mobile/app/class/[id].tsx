@@ -2,7 +2,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../lib/api";
 import { useCached } from "../../lib/use-cached";
-import { Badge, Card, Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, colors, palette } from "../../lib/ui";
+import { Badge, Button, Card, Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, colors, palette } from "../../lib/ui";
 
 export default function ClassScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,10 +17,13 @@ export default function ClassScreen() {
         {error ? <ErrorBox message={error} /> : null}
         {!cls && !error ? <Loading /> : null}
         {cls ? (
-          <Muted>
-            {cls.studentCount} student{cls.studentCount === 1 ? "" : "s"}
-            {cls.academicYear ? `, ${cls.academicYear}` : ""}
-          </Muted>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Muted>
+              {cls.studentCount} student{cls.studentCount === 1 ? "" : "s"}
+              {cls.academicYear ? `, ${cls.academicYear}` : ""}
+            </Muted>
+            <Button title="Grades and ranking" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/grades/[id]", params: { id: cls.id } })} />
+          </View>
         ) : null}
         {cls && cls.subjects.length === 0 ? <Empty>No subjects have been added to this class yet.</Empty> : null}
         {cls?.subjects.map((s) => (

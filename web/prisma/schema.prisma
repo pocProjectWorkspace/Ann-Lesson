@@ -77,6 +77,8 @@ model User {
 
   teachingAssignments TeacherAssignment[]
   progress            LessonProgress[]
+  gradesReceived      SubjectGrade[]      @relation("GradedStudent")
+  gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
   notifications       Notification[]
   pushTokens          PushToken[]
@@ -133,6 +135,7 @@ model Subject {
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
   lessons Lesson[]
+  grades   SubjectGrade[]
 
   @@index([classId])
 }
@@ -272,4 +275,26 @@ model PushToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// A teacher's rating of a student in one subject, 1 (needs support) to 5 (excellent).
+/// One row per student and subject; saving again overwrites it. Overall grade and class
+/// ranking are computed from these (see lib/grades.ts).
+model SubjectGrade {
+  id        String   @id @default(uuid())
+  schoolId  String
+  subjectId String
+  studentId String
+  teacherId String?
+  rating    Int // 1..5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  student User    @relation("GradedStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User?   @relation("GradedBy", fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@unique([subjectId, studentId])
+  @@index([schoolId, studentId])
 }

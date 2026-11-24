@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSchoolRole } from "@/lib/auth";
 import { studentHome } from "@/lib/data";
+import { studentGrades } from "@/lib/grades";
 import { Empty, ProgressBar, spineColor } from "@/components/ui";
 import { now } from "@/lib/time";
 
@@ -11,7 +12,7 @@ function greeting(d: Date) {
 
 export default async function StudentHome() {
   const session = await requireSchoolRole("STUDENT");
-  const home = await studentHome(session.userId);
+  const [home, grades] = await Promise.all([studentHome(session.userId), studentGrades(session.userId)]);
   const firstName = session.name.split(" ")[0];
   const hello = greeting(now());
 
@@ -71,6 +72,28 @@ export default async function StudentHome() {
             </div>
           </div>
         </Link>
+      )}
+
+      {grades && grades.subjects.some((s) => s.rating) && (
+        <section className="mt-8 rounded-[var(--radius-card)] border border-ink-200/80 bg-white px-5 py-4 shadow-card" aria-label="My grades">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-xl text-ink-900">My grades</h2>
+            <p className="text-sm text-ink-500">
+              Overall <span className="font-semibold text-ink-900">{grades.overall}%</span>
+              {grades.rank ? ` · rank ${grades.rank} of ${grades.gradedStudents}` : ""}
+            </p>
+          </div>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {grades.subjects.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 rounded-lg bg-paper/70 px-3.5 py-2.5 text-sm">
+                <span className="truncate font-semibold text-ink-900">{s.name}</span>
+                <span className="shrink-0 text-ink-600" aria-label={`${s.name}: ${s.label}`}>
+                  <span className="text-accent" aria-hidden>{s.rating ? "★".repeat(s.rating) + "☆".repeat(5 - s.rating) : "☆☆☆☆☆"}</span> {s.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <h2 className="mt-10 mb-4 text-xl text-ink-900">Your subjects</h2>

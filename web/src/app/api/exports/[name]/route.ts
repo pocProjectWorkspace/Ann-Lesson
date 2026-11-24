@@ -47,7 +47,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ name: strin
     });
     if (!cls || (session.role !== "SCHOOL_ADMIN" && session.role !== "TEACHER")) return new NextResponse("Forbidden", { status: 403 });
     const lessons = cls.subjects.flatMap((s) => s.lessons.map((l) => ({ ...l, subjectName: s.name })));
-    const header = ["Student", "Student ID", ...lessons.map((l) => `${l.subjectName}: ${l.title}`), "Learnt", "Confirmed", "Total"];
+    const grades = await db.subjectGrade.findMany({ where: { subject: { classId: cls.id } }, select: { studentId: true, subjectId: true, rating: true } });
+    const subjectCols = cls.subjects.map((s) => ({ id: s.id, name: s.name }));
+    const header = ["Student", "Student ID", ...lessons.map((l) => `${l.subjectName}: ${l.title}`), "Learnt", "Confirmed", "Total", ...subjectCols.map((s) => `Grade: ${s.name}`), "Overall grade %"];
     const body = cls.students.map((st) => {
       let learnt = 0;
       let confirmed = 0;
@@ -57,7 +59,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ name: strin
         if (p?.learntAt) learnt++;
         return p?.confirmedAt ? "Confirmed" : p?.learntAt ? "Learnt" : p?.finishedAt ? "Finished reading" : p ? (p.pageCount && p.maxPage ? `Read ${Math.round((p.maxPage / p.pageCount) * 100)}%` : "Opened") : "";
       });
-      return [st.name, st.username, ...cells, learnt, confirmed, lessons.length];
+      const mine = subjectCols.map((s) => grades.find((g) => g.studentId === st.id && g.subjectId === s.id)?.rating ?? null);
+      const rated = mine.filter((r): r is number => r !== null);
+      const overall = rated.length ? Math.round((rated.reduce((a, b) => a + b, 0) / rated.length / 5) * 100) : "";
+      return [st.name, st.username, ...cells, learnt, confirmed, lessons.length, ...mine.map((r) => r ?? ""), overall];
     });
     await audit(session, { action: "export.progress", targetType: "Class", targetId: cls.id, summary: `Exported progress for ${className(cls)}` });
     return csvResponse(`progress-${className(cls).replace(/\s+/g, "-").toLowerCase()}.csv`, toCsv([header, ...body]));

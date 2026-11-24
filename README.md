@@ -233,6 +233,18 @@ Publishing needs at least one PDF, records an audit entry, and sends the "new le
 notification to the class and its teachers. Unpublish hides the lesson again without losing
 progress. Lessons copied into a new class at year rollover keep their status.
 
+## Grades and ranking
+
+Teachers rate each student in each subject from 1 (needs support) to 5 (excellent), either
+on the web (`/teacher/classes/:id/grades`, one table saved at once) or in the app (tap to
+rate). A student's overall grade is the average rating as a percentage; the class is
+ranked by it with ties sharing a rank and ungraded students unranked. The teacher and
+school admin see the ranking with bars and subject averages; students see their own
+subject ratings, overall and rank on the home page and in the app, and are notified when
+grades change. Reading progress is shown beside grades but never changes them. The
+progress CSV carries a column per subject and the overall. Endpoints:
+`GET/POST /api/mobile/classes/:id/grades` (teacher), grades in `GET /api/mobile/home` (student).
+
 ## Reading progress
 
 Two things are tracked per student and lesson, and they are deliberately separate:

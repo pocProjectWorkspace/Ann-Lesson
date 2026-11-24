@@ -49,6 +49,25 @@ describe("tenant isolation", () => {
     expect((await api("/api/exports/students.csv", { token: gStudent })).status).toBe(403);
     expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/learnt`, { method: "POST", token: gTeacher, body: JSON.stringify({ learnt: true }) })).status).toBe(403);
   });
+  it("teachers grade students per subject; the gradebook ranks them; students see their own grades", async () => {
+    const book = await api<{ subjects: { id: string }[]; students: { id: string; username: string; overall: number | null; rank: number | null }[] }>(`/api/mobile/classes/${greenwoodClassId}/grades`, { token: gTeacher });
+    expect(book.status).toBe(200);
+    const subjectId = book.data!.subjects[0].id;
+    const me = book.data!.students.find((s) => s.username === users.greenwoodStudent.username)!;
+    const set = await api<{ overall: number | null; rank: number | null }>(`/api/mobile/classes/${greenwoodClassId}/grades`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentId: me.id, subjectId, rating: 4 }) });
+    expect(set.status).toBe(200);
+    expect(set.data!.overall).toBeGreaterThan(0);
+    expect(set.data!.rank).toBeGreaterThanOrEqual(1);
+    const home = await api<{ grades: { overall: number | null; subjects: { id: string; rating: number | null; label: string }[] } }>("/api/mobile/home", { token: gStudent });
+    const mine = home.data!.grades.subjects.find((s) => s.id === subjectId)!;
+    expect(mine.rating).toBe(4);
+    expect(mine.label).toBe("Good");
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { token: rTeacher })).status).toBe(404);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { token: gStudent })).status).toBe(403);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentId: me.id, subjectId, rating: 9 }) })).status).toBe(400);
+    // Clear it again so the demo data stays clean.
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentId: me.id, subjectId, rating: null }) })).status).toBe(200);
+  });
   it("students and teachers never get a download disposition for PDFs", async () => {
     const r = await api(`/api/files/${greenwoodLesson.files[0].id}?download=1`, { token: gStudent });
     expect(r.status).toBe(200);

@@ -4,7 +4,7 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCached } from "../lib/use-cached";
-import { Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, SpineCard, Subtitle, Title, colors, palette, setAccent } from "../lib/ui";
+import { Card, Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, SpineCard, Subtitle, Title, colors, palette, setAccent } from "../lib/ui";
 
 function greeting() {
   const h = new Date().getHours();
@@ -97,6 +97,24 @@ export default function HomeScreen() {
           </Pressable>
         ) : null}
 
+        {home?.role === "STUDENT" && home.grades && home.grades.subjects.some((s) => s.rating) ? (
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: palette.ink950, fontFamily: "serif" }}>My grades</Text>
+              <Muted>
+                Overall {home.grades.overall}%{home.grades.rank ? ` · rank ${home.grades.rank} of ${home.grades.gradedStudents}` : ""}
+              </Muted>
+            </View>
+            {home.grades.subjects.map((g) => (
+              <View key={g.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 }}>
+                <Text style={{ fontWeight: "600", color: palette.ink900 }}>{g.name}</Text>
+                <Text style={{ color: colors.muted }} accessibilityLabel={`${g.name}: ${g.label}`}>
+                  <Text style={{ color: colors.primary }}>{g.rating ? "★".repeat(g.rating) + "☆".repeat(5 - g.rating) : "☆☆☆☆☆"}</Text> {g.label}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        ) : null}
         {home?.role === "STUDENT" &&
           (home.subjects.length === 0 ? (
             <Empty>{home.class ? "No lessons have been published for your class yet." : "You have not been placed in a class yet. Ask your school admin."}</Empty>
