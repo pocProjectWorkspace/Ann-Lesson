@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { createWebSession, destroySession, homeFor, verifyPassword } from "@/lib/auth";
 import { LOGIN_PER_ACCOUNT, LOGIN_PER_IP, blockedFor, clientIpFrom, humanWait, recordFailure, recordSuccess } from "@/lib/rate-limit";
 import type { ActionState } from "@/lib/utils";
+import { mustUseSso, providerLabel, type AuthMode } from "@/lib/sso";
 
 const schema = z.object({
   schoolCode: z.string().trim().max(40).optional().default(""),
@@ -35,8 +36,9 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   };
 
   let user;
+  let school = null;
   if (schoolCode) {
-    const school = await db.school.findUnique({ where: { code: schoolCode.toUpperCase() } });
+    school = await db.school.findUnique({ where: { code: schoolCode.toUpperCase() } });
     if (!school) return failed("School code not found.");
     if (!school.isActive) return fail("This school is currently inactive.");
     user = await db.user.findFirst({ where: { schoolId: school.id, username: { equals: username, mode: "insensitive" } } });
@@ -47,6 +49,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   if (!user || !(await verifyPassword(password, user.passwordHash))) return failed("Incorrect username or password.");
   if (!user.isActive) return fail("Your account is inactive. Contact your school admin.");
+  if (school && mustUseSso(school, user)) return fail(`${school.name} signs in with ${providerLabel[school.authMode as AuthMode]}. Use the "Sign in with ${providerLabel[school.authMode as AuthMode]}" button above.`);
 
   recordSuccess(ipKey);
   recordSuccess(accountKey);

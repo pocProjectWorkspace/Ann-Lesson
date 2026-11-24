@@ -64,6 +64,23 @@ describe("CORS for the token API", () => {
   });
 });
 
+describe("sign-in options and SSO endpoints", () => {
+  it("reports form login for a school without a provider and refuses to start SSO for it", async () => {
+    const o = await api<{ mode: string; provider: string | null; name: string }>("/api/auth/login-options?code=greenwood");
+    expect(o.status).toBe(200);
+    expect(o.data!.mode).toBe("FORM");
+    expect(o.data!.provider).toBeNull();
+    expect((await api("/api/auth/login-options?code=NOPE")).status).toBe(404);
+    const start = await fetch(`${BASE}/api/auth/sso/start?school=GREENWOOD`, { redirect: "manual" });
+    expect(start.status).toBe(400);
+  });
+  it("rejects a callback without a flow cookie", async () => {
+    const cb = await fetch(`${BASE}/api/auth/sso/callback?code=x&state=y`, { redirect: "manual" });
+    expect(cb.status).toBe(307);
+    expect(cb.headers.get("location")).toMatch(/\/login\?.*error=sso.*reason=expired/);
+  });
+});
+
 describe("health and error reporting", () => {
   it("health endpoint reports the database", async () => {
     const r = await api<{ ok: boolean; db: string }>("/api/health");

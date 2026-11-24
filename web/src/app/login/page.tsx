@@ -2,10 +2,19 @@ import { redirect } from "next/navigation";
 import { getSession, homeFor } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
+const SSO_REASONS: Record<string, string> = {
+  expired: "The sign-in took too long or the browser lost track of it. Please try again.",
+  denied: "The sign-in was cancelled at the provider.",
+  state: "The sign-in response did not match this browser. Please try again.",
+  school: "That school code is not known or the school is inactive.",
+  provider: "The school's sign-in provider returned an error. The school admin should check the configuration.",
+  refused: "You signed in, but this account is not allowed into the school.",
+};
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; school?: string; reason?: string; message?: string }> }) {
   const session = await getSession();
   if (session) redirect(homeFor[session.role]);
-  const { next = "", error } = await searchParams;
+  const { next = "", error, school = "", reason = "", message = "" } = await searchParams;
 
   return (
     <div className="grid min-h-screen bg-paper lg:grid-cols-[1.1fr_1fr]">
@@ -73,8 +82,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               Your account or school is inactive. Contact your administrator.
             </p>
           )}
+          {error === "sso" && (
+            <p className="mt-5 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-700" role="alert">
+              {SSO_REASONS[reason] ?? "Sign-in with the school account did not complete."}
+              {message ? ` ${message}` : ""}
+            </p>
+          )}
           <div className="mt-6">
-            <LoginForm next={next} />
+            <LoginForm next={next} initialSchool={school.toUpperCase().slice(0, 20)} />
           </div>
           <p className="mt-6 text-[13px] leading-relaxed text-ink-500">Platform owner? Leave the school code blank and sign in with your email.</p>
         </div>

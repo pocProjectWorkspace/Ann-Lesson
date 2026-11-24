@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { planLabel } from "@/lib/plans";
 import { Alert, Badge, Card, Empty, Field, Input, LinkButton, PageHeader, Select, Stat, Table, Td } from "@/components/ui";
+import { SsoFields } from "@/components/sso-fields";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { listParams, Pagination, SearchBox } from "@/components/list-controls";
 import { createSchool, toggleSchoolActive } from "./actions";
@@ -100,7 +101,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               </Select>
             </Field>
             <hr className="border-ink-100" />
+            <SsoFields />
+            <hr className="border-ink-100" />
             <p className="text-sm font-semibold text-ink-700">First school admin</p>
+            <p className="text-xs text-ink-500">This is the break-glass account: it always signs in with its password, even when the school uses Microsoft or Google.</p>
             <Field label="Name">
               <Input name="adminName" required />
             </Field>

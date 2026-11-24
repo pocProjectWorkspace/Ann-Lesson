@@ -5,7 +5,9 @@ import { planStatus, PLANS, planKeys } from "@/lib/plans";
 import { Badge, Card, Empty, Field, Input, PageHeader, Select, Stat, Table, Td, Textarea } from "@/components/ui";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { AuditTable } from "@/components/audit-table";
-import { addSchoolAdmin, applyPlanPreset, createInvoice, deleteInvoice, deleteSchool, markInvoicePaid, resetUserPassword, schoolDeleteBlockers, toggleSchoolActive, toggleUserActive, updateSchoolPlan } from "../../actions";
+import { addSchoolAdmin, applyPlanPreset, createInvoice, deleteInvoice, deleteSchool, markInvoicePaid, resetUserPassword, schoolDeleteBlockers, toggleSchoolActive, toggleUserActive, updateSchoolAuth, updateSchoolPlan } from "../../actions";
+import { SsoFields } from "@/components/sso-fields";
+import { providerLabel, ssoConfigured, type AuthMode } from "@/lib/sso";
 import { formatDate } from "@/lib/utils";
 import { daysFromNow, now } from "@/lib/time";
 
@@ -125,6 +127,18 @@ export default async function SchoolDetail({ params }: { params: Promise<{ id: s
             </div>
           </Card>
 
+          <Card
+            title="Sign-in"
+            description={school.authMode === "FORM" ? "School code, username and password for everyone." : `Staff sign in with ${providerLabel[school.authMode as AuthMode]}. Students use their student ID and password${school.ssoStudents ? ", or the provider" : ""}.`}
+            actions={ssoConfigured(school) ? <a href={`/api/auth/sso/start?school=${encodeURIComponent(school.code)}&test=1`} target="_blank" rel="noreferrer" className="rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-ink-900 hover:bg-ink-100">Test connection</a> : undefined}
+          >
+            <ActionForm action={updateSchoolAuth} submitLabel="Save sign-in settings" resetOnSuccess={false}>
+              <input type="hidden" name="schoolId" value={school.id} />
+              <SsoFields defaults={{ authMode: school.authMode, ssoTenant: school.ssoTenant, ssoClientId: school.ssoClientId, hasSecret: !!school.ssoClientSecret, ssoAdminGroups: school.ssoAdminGroups, ssoTeacherGroups: school.ssoTeacherGroups, ssoAutoProvision: school.ssoAutoProvision, ssoStudents: school.ssoStudents }} />
+            </ActionForm>
+            {school.authMode !== "FORM" && <p className="mt-3 text-xs text-ink-500">Test connection opens the provider in a new tab; sign in with an account from the school to see what it would be mapped to. Nothing is created by a test.</p>}
+          </Card>
+
           <Card title="School admins">
             {admins.length === 0 ? (
               <Empty>No admins. Add one on the right.</Empty>
@@ -137,7 +151,10 @@ export default async function SchoolDetail({ params }: { params: Promise<{ id: s
                       <code className="text-xs">{u.username}</code>
                     </Td>
                     <Td>{u.email ?? "—"}</Td>
-                    <Td>{u.isActive ? <Badge tone="green">Active</Badge> : <Badge tone="red">Inactive</Badge>}</Td>
+                    <Td>
+                      {u.isActive ? <Badge tone="green">Active</Badge> : <Badge tone="red">Inactive</Badge>} {u.isBreakGlass && <Badge tone="slate">Break-glass login</Badge>}
+                      {u.authProvider !== "FORM" && <Badge tone="slate">{providerLabel[u.authProvider as AuthMode]}</Badge>}
+                    </Td>
                     <Td className="text-right">
                       <InlineAction action={toggleUserActive} hidden={{ id: u.id }} label={u.isActive ? "Deactivate" : "Activate"} variant={u.isActive ? "danger" : "secondary"} />
                     </Td>

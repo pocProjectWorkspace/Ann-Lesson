@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mustUseSso, providerLabel, type AuthMode } from "@/lib/sso";
 import { db } from "@/lib/db";
 import { createMobileSession, verifyPassword } from "@/lib/auth";
 import { fail, json } from "@/lib/api";
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
   if (!user || !(await verifyPassword(password, user.passwordHash))) return failed(401, "Incorrect username or password.");
   if (!user.isActive) return fail(403, "Your account is inactive. Contact your school admin.");
   if (user.role !== "STUDENT" && user.role !== "TEACHER") return fail(403, "The mobile app is for teachers and students. Admins use the web app.");
+  if (mustUseSso(school, user)) return fail(403, `${school.name} signs in with ${providerLabel[school.authMode as AuthMode]}. Use the school account button.`);
 
   recordSuccess(ipKey);
   recordSuccess(accountKey);

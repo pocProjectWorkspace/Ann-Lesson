@@ -30,6 +30,19 @@ model School {
   maxTeachers   Int       @default(5)
   maxStorageMb  Int       @default(1024)
 
+  // Sign-in method, set by the platform owner: FORM (school code + password),
+  // MICROSOFT (Entra ID / Microsoft 365) or GOOGLE (Google Workspace). Staff of an SSO
+  // school sign in with the provider; students keep student ID + password unless
+  // ssoStudents is on. The client secret is stored encrypted (see lib/sso.ts).
+  authMode         String  @default("FORM")
+  ssoTenant        String? // Microsoft: directory (tenant) id. Google: the Workspace domain.
+  ssoClientId      String?
+  ssoClientSecret  String? // encrypted
+  ssoAdminGroups   String? // comma-separated group ids (Microsoft) or emails: who becomes a school admin
+  ssoTeacherGroups String? // comma-separated group ids or emails; empty = every staff sign-in becomes a teacher
+  ssoAutoProvision Boolean @default(true) // create teachers on first sign-in
+  ssoStudents      Boolean @default(false) // students may also sign in with the provider (matched by email)
+
   users    User[]
   classes  Class[]
   subjects Subject[]
@@ -51,6 +64,13 @@ model User {
   classId      String? // students: the class they belong to
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  // How this person signs in. FORM = local password. MICROSOFT / GOOGLE = linked to the
+  // school provider; externalId is the provider subject. A break-glass admin always has a
+  // working local password, whatever the school mode, so a provider outage cannot lock
+  // the school out.
+  authProvider String  @default("FORM")
+  externalId   String?
+  isBreakGlass Boolean @default(false)
 
   school   School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class    Class?  @relation("StudentsInClass", fields: [classId], references: [id], onDelete: SetNull)
@@ -65,6 +85,7 @@ model User {
 
   @@unique([schoolId, username])
   @@index([schoolId, role])
+  @@index([schoolId, externalId])
 }
 
 /// One row per signed-in device. Lets us revoke access immediately.

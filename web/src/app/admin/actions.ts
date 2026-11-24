@@ -9,6 +9,7 @@ import { audit } from "@/lib/audit";
 import { PLANS, planKeys, type PlanKey } from "@/lib/plans";
 import { notifyUsers } from "@/lib/notify";
 import type { ActionState } from "@/lib/utils";
+import { encryptSecret, isAuthMode, providerLabel, type AuthMode } from "@/lib/sso";
 
 const codeSchema = z
   .string()
@@ -21,7 +22,41 @@ const codeSchema = z
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(100);
 const firstIssue = (e: z.ZodError) => e.issues[0]?.message ?? "Invalid input";
 
-const createSchoolSchema = z.object({
+const ssoSchema = z.object({
+  authMode: z.string().refine(isAuthMode, "Unknown sign-in method").default("FORM"),
+  ssoTenant: z.string().trim().max(200).optional().default(""),
+  ssoClientId: z.string().trim().max(300).optional().default(""),
+  ssoClientSecret: z.string().max(500).optional().default(""),
+  ssoAdminGroups: z.string().trim().max(4000).optional().default(""),
+  ssoTeacherGroups: z.string().trim().max(4000).optional().default(""),
+  ssoAutoProvision: z.string().optional(),
+  ssoStudents: z.string().optional(),
+});
+
+/** Validates the SSO part of a form and returns the columns to write; `keepSecret` keeps a stored secret when the field is blank. */
+function ssoData(d: z.infer<typeof ssoSchema>, keepSecret: boolean): { error: string } | { data: Record<string, unknown> } {
+  const mode = d.authMode as AuthMode;
+  if (mode === "FORM") return { data: { authMode: "FORM" } };
+  if (!d.ssoTenant) return { error: mode === "MICROSOFT" ? "Enter the Microsoft directory (tenant) ID" : "Enter the Google Workspace domain" };
+  if (mode === "MICROSOFT" && !/^[0-9a-f-]{36}$/i.test(d.ssoTenant)) return { error: "The Microsoft tenant ID is a GUID, e.g. 72f988bf-86f1-41af-91ab-2d7cd011db47" };
+  if (mode === "GOOGLE" && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d.ssoTenant)) return { error: "Enter the Google Workspace domain, e.g. school.example" };
+  if (!d.ssoClientId) return { error: "Enter the client ID" };
+  if (!d.ssoClientSecret && !keepSecret) return { error: "Enter the client secret" };
+  return {
+    data: {
+      authMode: mode,
+      ssoTenant: mode === "GOOGLE" ? d.ssoTenant.toLowerCase() : d.ssoTenant,
+      ssoClientId: d.ssoClientId,
+      ...(d.ssoClientSecret ? { ssoClientSecret: encryptSecret(d.ssoClientSecret) } : {}),
+      ssoAdminGroups: d.ssoAdminGroups || null,
+      ssoTeacherGroups: d.ssoTeacherGroups || null,
+      ssoAutoProvision: d.ssoAutoProvision === "yes",
+      ssoStudents: d.ssoStudents === "yes",
+    },
+  };
+}
+
+const createSchoolSchema = ssoSchema.extend({
   name: z.string().trim().min(2, "School name is required").max(120),
   code: codeSchema,
   plan: z.enum(["TRIAL", "BASIC", "PRO"]).default("TRIAL"),
@@ -38,6 +73,9 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
   const d = parsed.data;
   if (await db.school.findUnique({ where: { code: d.code } })) return { error: `School code ${d.code} is already taken` };
 
+  const sso = ssoData(d, false);
+  if ("error" in sso) return { error: sso.error };
+
   const plan = PLANS[d.plan];
   const school = await db.school.create({
     data: {
@@ -48,12 +86,32 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
       maxStudents: plan.maxStudents,
       maxTeachers: plan.maxTeachers,
       maxStorageMb: plan.maxStorageMb,
-      users: { create: { role: "SCHOOL_ADMIN", name: d.adminName, username: d.adminUsername, email: d.adminEmail || null, passwordHash: await hashPassword(d.adminPassword) } },
+      ...sso.data,
+      // The first admin is the break-glass account: a local password that always works.
+      users: { create: { role: "SCHOOL_ADMIN", name: d.adminName, username: d.adminUsername, email: d.adminEmail || null, passwordHash: await hashPassword(d.adminPassword), isBreakGlass: true } },
     },
   });
-  await audit(session, { schoolId: school.id, action: "school.create", targetType: "School", targetId: school.id, summary: `Created school ${d.name} (${d.code}) on ${plan.label}` });
+  await audit(session, { schoolId: school.id, action: "school.create", targetType: "School", targetId: school.id, summary: `Created school ${d.name} (${d.code}) on ${plan.label}, sign-in: ${providerLabel[d.authMode as AuthMode]}` });
   revalidatePath("/admin");
   return { success: `School ${d.name} created with code ${d.code}` };
+}
+
+const updateAuthSchema = ssoSchema.extend({ schoolId: z.string().uuid() });
+
+/** Owner: change how a school signs in. Switching to a provider keeps every account; staff are matched by email on their first provider sign-in. */
+export async function updateSchoolAuth(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireRole("SUPER_ADMIN");
+  const parsed = updateAuthSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const d = parsed.data;
+  const school = await db.school.findUnique({ where: { id: d.schoolId } });
+  if (!school) return { error: "School not found" };
+  const sso = ssoData(d, !!school.ssoClientSecret && school.authMode === d.authMode);
+  if ("error" in sso) return { error: sso.error };
+  await db.school.update({ where: { id: school.id }, data: sso.data });
+  await audit(session, { schoolId: school.id, action: "school.auth.update", targetType: "School", targetId: school.id, summary: `Sign-in for ${school.name} set to ${providerLabel[d.authMode as AuthMode]}` });
+  revalidatePath(`/admin/schools/${school.id}`);
+  return { success: d.authMode === "FORM" ? "Sign-in set to school code and password" : `Sign-in set to ${providerLabel[d.authMode as AuthMode]}. Use Test connection before telling the school.` };
 }
 
 export async function toggleSchoolActive(formData: FormData) {

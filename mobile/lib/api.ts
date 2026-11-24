@@ -110,6 +110,7 @@ export type NotificationItem = { id: string; title: string; body: string | null;
 /* ---------- Calls ---------- */
 
 export const api = {
+  loginOptions: (code: string) => request<{ code: string; name: string; mode: "FORM" | "MICROSOFT" | "GOOGLE"; provider: string | null; studentsSso: boolean }>(`/api/auth/login-options?code=${encodeURIComponent(code)}`),
   login: (body: { schoolCode: string; username: string; password: string }) => request<{ token: string; user: User }>("/api/mobile/login", { method: "POST", body: JSON.stringify(body) }),
   me: () => request<User>("/api/mobile/me"),
   home: () => request<Home>("/api/mobile/home"),

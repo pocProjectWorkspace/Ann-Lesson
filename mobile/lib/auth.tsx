@@ -10,6 +10,8 @@ type AuthState = {
   ready: boolean;
   user: User | null;
   signIn: (schoolCode: string, username: string, password: string) => Promise<void>;
+  /** Finish a single sign-on: the server handed the app a session token and the user. */
+  signInWithToken: (token: string, user: User) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
@@ -69,13 +71,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerForPush().then((t) => (pushToken.current = t));
   }, []);
 
+  const signInWithToken = useCallback(async (token: string, u: User) => {
+    setToken(token);
+    setUser(u);
+    await Promise.all([secureSet(TOKEN_KEY, token), secureSet(USER_KEY, JSON.stringify(u))]);
+    // The SSO redirect carries a minimal profile; fetch the full one (class, school) now.
+    api.me().then((full) => { setUser(full); void secureSet(USER_KEY, JSON.stringify(full)); }).catch(() => {});
+    registerForPush().then((t) => (pushToken.current = t));
+  }, []);
+
   const refreshUser = useCallback(async () => {
     const u = await api.me();
     setUser(u);
     await secureSet(USER_KEY, JSON.stringify(u));
   }, []);
 
-  const value = useMemo(() => ({ ready, user, signIn, signOut, refreshUser }), [ready, user, signIn, signOut, refreshUser]);
+  const value = useMemo(() => ({ ready, user, signIn, signInWithToken, signOut, refreshUser }), [ready, user, signIn, signInWithToken, signOut, refreshUser]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

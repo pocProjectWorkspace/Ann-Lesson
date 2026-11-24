@@ -208,6 +208,19 @@ the route; a 300 MB book would then exceed a small container's memory. The route
 own Origin, session and role checks and streams the body to storage in 8 MB parts, so a
 380 MB upload peaks at under 200 MB of server memory.
 
+## Single sign-on
+
+Each school has one sign-in method, set by the platform owner when creating the school and
+changeable on the school page: school code and password, Microsoft (Entra ID), or Google
+Workspace. Staff of an SSO school sign in with the provider over OpenID Connect; students
+keep student ID and password unless the owner allows student SSO. Accounts are matched by
+provider id, then by email; teachers can be created on first sign-in; roles come from the
+school admin and teacher lists (group ids or emails). Every school keeps a break-glass
+admin whose password always works. The owner page has a Test connection button that
+shows who a provider login maps to without creating anything. Setup steps per provider
+are in [docs/SSO.md](docs/SSO.md). Endpoints: `GET /api/auth/login-options?code=`,
+`GET /api/auth/sso/start?school=`, `GET /api/auth/sso/callback`.
+
 ## Draft and publish
 
 A lesson is a draft until the school admin publishes it. Drafts are visible to admins and
