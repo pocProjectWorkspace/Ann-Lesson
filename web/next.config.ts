@@ -32,6 +32,7 @@ const baseSecurityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
   async headers() {
     return [
       // Pages: never framed by other sites. The API sets its own headers per route.

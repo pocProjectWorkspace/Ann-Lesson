@@ -43,4 +43,13 @@ describe("columnIndex", () => {
     expect(columnIndex(h, "email")).toBe(2);
     expect(columnIndex(h, "password")).toBe(-1);
   });
+  it("neutralises spreadsheet formulas in exported cells", async () => {
+    const { toCsv } = await import("@/lib/csv");
+    const out = toCsv([["=HYPERLINK(\"http://evil\")", "+1", "-2", "@x", "plain"]]);
+    expect(out).toContain("'=HYPERLINK");
+    expect(out).toContain("'+1");
+    expect(out).toContain("'-2");
+    expect(out).toContain("'@x");
+    expect(out).toContain(",plain");
+  });
 });

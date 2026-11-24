@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { reportError } from "@/lib/report-error";
+import { hitPublic } from "@/lib/rate-limit";
 
 /** POST /api/client-error: the browser error boundary reports render failures here. */
 export async function POST(req: Request) {
+  if (hitPublic(req.headers, "client-error")) return NextResponse.json({ ok: false }, { status: 429 });
   const parsed = z.object({ message: z.string().max(500), digest: z.string().max(64).optional(), path: z.string().max(300).optional() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
   const session = await getSession().catch(() => null);

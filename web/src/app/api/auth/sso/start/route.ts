@@ -1,10 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { authorizationUrl, flowCookieOptions, newFlow, signFlow, SSO_COOKIE, ssoConfigured } from "@/lib/sso";
+import { hitPublic } from "@/lib/rate-limit";
 
-/** Public origin of this deployment, honouring the proxy in front of it. */
+/**
+ * Public origin of this deployment, honouring the proxy in front of it. In production
+ * the host must be one of APP_ORIGINS, so a forged Host header cannot steer the
+ * provider's redirect_uri; otherwise the first configured origin is used.
+ */
 export function publicOrigin(req: NextRequest) {
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+  let host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+  const allowed = (process.env.APP_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (allowed.length && !allowed.includes(host)) host = allowed[0];
   const proto = req.headers.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") || /^\d+\.\d+\.\d+\.\d+/.test(host) ? "http" : "https");
   return `${proto}://${host}`;
 }
@@ -30,6 +37,7 @@ function allowedMobileRedirect(url: string | null) {
  * a short-lived signed cookie and are checked in the callback.
  */
 export async function GET(req: NextRequest) {
+  if (hitPublic(req.headers, "sso-start")) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const q = req.nextUrl.searchParams;
   const code = (q.get("school") ?? "").trim().toUpperCase();
   const school = code ? await db.school.findUnique({ where: { code } }) : null;

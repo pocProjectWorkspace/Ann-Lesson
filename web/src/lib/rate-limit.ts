@@ -20,6 +20,16 @@ export type LimitRule = { max: number; windowMs: number; blockMs: number };
 
 export const LOGIN_PER_IP: LimitRule = { max: 30, windowMs: 15 * 60_000, blockMs: 15 * 60_000 };
 export const LOGIN_PER_ACCOUNT: LimitRule = { max: 5, windowMs: 15 * 60_000, blockMs: 15 * 60_000 };
+/** Unauthenticated endpoints that cost a database or network call per hit. */
+export const PUBLIC_PER_IP: LimitRule = { max: 60, windowMs: 15 * 60_000, blockMs: 5 * 60_000 };
+
+/** Count one hit on a public endpoint; returns seconds to wait when the caller is over the limit. */
+export function hitPublic(headers: Headers, name: string) {
+  const key = `public:${name}:${clientIpFrom(headers)}`;
+  const wait = blockedFor(key);
+  if (wait) return wait;
+  return recordFailure(key, PUBLIC_PER_IP);
+}
 
 /** Returns seconds to wait if the key is currently blocked, otherwise 0. */
 export function blockedFor(key: string): number {

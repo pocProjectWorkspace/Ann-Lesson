@@ -137,6 +137,10 @@ web/
 - **Login rate limiting.** 5 failed attempts per account or 30 per IP address in
   15 minutes pauses sign-in for 15 minutes. The limiter is in-process; put it
   behind Redis if you run more than one app instance.
+- **Public endpoints are rate limited** per IP (login options, SSO start, client error
+  reports: 60 per 15 minutes), the framework header is hidden, CSV exports neutralise
+  spreadsheet formulas, and the SSO redirect URI is pinned to `APP_ORIGINS` so a forged
+  Host header cannot redirect a sign-in. Dependabot opens weekly update PRs.
 - **Cross-site request protection.** The proxy refuses any cookie-authenticated
   POST whose `Origin` does not match the host. Set `APP_ORIGINS` to your public
   hostnames in production so Next.js server actions apply the same rule.

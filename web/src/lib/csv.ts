@@ -36,7 +36,10 @@ export function parseCsv(text: string): string[][] {
 
 export function toCsv(rows: (string | number | null | undefined)[][]): string {
   const esc = (v: string | number | null | undefined) => {
-    const s = v === null || v === undefined ? "" : String(v);
+    let s = v === null || v === undefined ? "" : String(v);
+    // A cell starting with = + - @ or a tab is a formula to Excel and Sheets; a student
+    // named "=HYPERLINK(...)" must not run when a teacher opens the export.
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";

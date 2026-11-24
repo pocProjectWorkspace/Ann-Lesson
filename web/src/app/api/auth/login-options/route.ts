@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { isAuthMode, providerLabel, ssoConfigured, type AuthMode } from "@/lib/sso";
+import { hitPublic } from "@/lib/rate-limit";
 
 /**
  * GET /api/auth/login-options?code=SCHOOLCODE
@@ -9,6 +10,7 @@ import { isAuthMode, providerLabel, ssoConfigured, type AuthMode } from "@/lib/s
  * nothing beyond what the school's own login page shows.
  */
 export async function GET(req: NextRequest) {
+  if (hitPublic(req.headers, "login-options")) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const code = (req.nextUrl.searchParams.get("code") ?? "").trim().toUpperCase();
   if (!code) return NextResponse.json({ error: "Missing school code" }, { status: 400 });
   const school = await db.school.findUnique({ where: { code }, select: { name: true, isActive: true, authMode: true, ssoTenant: true, ssoClientId: true, ssoClientSecret: true, ssoStudents: true } });
