@@ -84,19 +84,22 @@ export async function classGradebook(classId: string) {
 
 /** A student's own grades: per subject, overall, and their rank in the class. */
 export async function studentGrades(userId: string) {
-  const me = await db.user.findUnique({ where: { id: userId }, select: { classId: true } });
+  const me = await db.user.findUnique({ where: { id: userId }, select: { classId: true, school: { select: { showStudentRank: true } } } });
   if (!me?.classId) return null;
   const book = await classGradebook(me.classId);
   if (!book) return null;
   const mine = book.students.find((s) => s.id === userId);
   if (!mine) return null;
+  const showRank = !!me.school?.showStudentRank;
   return {
     subjects: book.subjects.map((s) => {
       const r = mine.ratings.find((x) => x.subjectId === s.id);
       return { id: s.id, name: s.name, rating: r?.rating ?? null, label: ratingLabel(r?.rating), comment: r?.comment ?? null, updatedAt: r?.updatedAt ?? null };
     }),
     overall: mine.overall,
-    rank: mine.rank,
+    // The school decides whether children see their position in the class.
+    rank: showRank ? mine.rank : null,
+    showRank,
     classSize: book.students.length,
     gradedStudents: book.gradedStudents,
   };

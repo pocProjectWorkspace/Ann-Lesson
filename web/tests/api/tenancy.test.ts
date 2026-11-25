@@ -59,6 +59,7 @@ describe("tenant isolation", () => {
     expect(set.data!.overall).toBeGreaterThan(0);
     expect(set.data!.rank).toBeGreaterThanOrEqual(1);
     const home = await api<{ grades: { overall: number | null; subjects: { id: string; rating: number | null; label: string }[] } }>("/api/mobile/home", { token: gStudent });
+    expect(typeof (home.data!.grades as { showRank?: boolean }).showRank).toBe("boolean");
     const mine = home.data!.grades.subjects.find((s) => s.id === subjectId)!;
     expect(mine.rating).toBe(4);
     expect(mine.label).toBe("Good");

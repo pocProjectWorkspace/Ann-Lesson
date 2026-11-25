@@ -484,3 +484,13 @@ export async function deleteLessonFile(formData: FormData) {
   await audit(session, { action: "lesson.file.delete", targetType: "LessonFile", targetId: id, summary: `Deleted ${file.fileName}` });
   revalidatePath(`/school/lessons/${file.lessonId}`);
 }
+
+/** School admin preference: whether students see their class rank or only their own stars. */
+export async function setStudentRankVisibility(formData: FormData) {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const show = String(formData.get("show") ?? "yes") === "yes";
+  await db.school.update({ where: { id: session.schoolId }, data: { showStudentRank: show } });
+  await audit(session, { action: "school.preference", targetType: "School", targetId: session.schoolId, summary: show ? "Students now see their class rank" : "Students now see only their own grades, not their rank" });
+  revalidatePath("/school");
+  revalidatePath("/student");
+}

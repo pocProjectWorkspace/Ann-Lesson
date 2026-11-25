@@ -83,7 +83,7 @@ export type ProgressState = "none" | "viewed" | "finished" | "learnt" | "confirm
 export type LessonSummary = { id: string; title: string; description: string | null; fileCount: number; viewed: boolean; learnt: boolean; confirmed?: boolean; finished?: boolean; percent?: number; lastPage?: number; pageCount?: number | null; state: ProgressState };
 export type SubjectSummary = { id: string; name: string; lessonCount: number; learntCount: number; readPercent?: number; lessons: LessonSummary[] };
 export type SubjectDetail = SubjectSummary & { class: { id: string; name: string } };
-export type StudentGrades = { subjects: { id: string; name: string; rating: number | null; label: string }[]; overall: number | null; rank: number | null; classSize: number; gradedStudents: number };
+export type StudentGrades = { subjects: { id: string; name: string; rating: number | null; label: string }[]; overall: number | null; rank: number | null; showRank?: boolean; classSize: number; gradedStudents: number };
 export type StudentHome = { role: "STUDENT"; class: { id: string; name: string; academicYear: string | null } | null; totals: { lessons: number; learnt: number }; continueLessonId: string | null; subjects: SubjectSummary[]; grades?: StudentGrades | null };
 export type Gradebook = {
   id: string;

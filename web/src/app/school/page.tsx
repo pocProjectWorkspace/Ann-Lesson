@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireSchoolRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, Empty, LinkButton, PageHeader, Stat, Table, Td } from "@/components/ui";
+import { InlineAction } from "@/components/forms";
+import { setStudentRankVisibility } from "./actions";
 
 export default async function SchoolHome() {
   const { schoolId } = await requireSchoolRole("SCHOOL_ADMIN");
@@ -80,6 +82,16 @@ export default async function SchoolHome() {
               </li>
             ))}
           </ol>
+        </Card>
+
+        <Card title="Grades" description="What students see on their own page.">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-ink-900">{school.showStudentRank ? "Students see their class rank" : "Students see only their own stars"}</p>
+              <p className="mt-0.5 text-xs text-ink-500">{school.showStudentRank ? "Each child sees their position, for example rank 2 of 12, next to their grades." : "Children see their ratings and overall grade, but not where they stand in the class. Teachers and you still see the ranking."}</p>
+            </div>
+            <InlineAction action={setStudentRankVisibility} hidden={{ show: school.showStudentRank ? "no" : "yes" }} label={school.showStudentRank ? "Hide rank" : "Show rank"} variant="secondary" />
+          </div>
         </Card>
       </div>
     </>

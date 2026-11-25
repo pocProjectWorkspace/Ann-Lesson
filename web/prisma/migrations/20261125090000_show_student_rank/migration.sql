@@ -1,0 +1,1 @@
+ALTER TABLE "School" ADD COLUMN "showStudentRank" BOOLEAN NOT NULL DEFAULT true;
