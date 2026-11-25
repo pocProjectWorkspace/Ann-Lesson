@@ -22,7 +22,10 @@ export default function ClassScreen() {
               {cls.studentCount} student{cls.studentCount === 1 ? "" : "s"}
               {cls.academicYear ? `, ${cls.academicYear}` : ""}
             </Muted>
-            <Button title="Grades and ranking" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/grades/[id]", params: { id: cls.id } })} />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Button title="Board remote" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/remote/[id]", params: { id: cls.id } })} />
+              <Button title="Grades" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/grades/[id]", params: { id: cls.id } })} />
+            </View>
           </View>
         ) : null}
         {cls && cls.subjects.length === 0 ? <Empty>No subjects have been added to this class yet.</Empty> : null}

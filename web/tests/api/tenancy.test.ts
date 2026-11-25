@@ -69,6 +69,25 @@ describe("tenant isolation", () => {
     // Clear it again so the demo data stays clean.
     expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentId: me.id, subjectId, rating: null }) })).status).toBe(200);
   });
+  it("live classroom room: teacher opens and controls it, students read it and report presence, outsiders are kept out", async () => {
+    const fileId = greenwoodLesson.files[0].id;
+    const open = await api<{ ok: boolean; state: { page: number; follow: boolean } }>(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "open", lessonId: greenwoodLesson.id, fileId, page: 2 }) });
+    expect(open.status).toBe(200);
+    expect(open.data!.state.page).toBe(2);
+    const seen = await api<{ state: { page: number } | null; people: { id: string; page: number | null }[] }>(`/api/live/${greenwoodClassId}`, { token: gStudent });
+    expect(seen.status).toBe(200);
+    expect(seen.data!.state?.page).toBe(2);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "page", page: 3 }) })).status).toBe(403);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "here", page: 2 }) })).status).toBe(200);
+    const after = await api<{ people: { role: string; page: number | null }[] }>(`/api/live/${greenwoodClassId}`, { token: gTeacher });
+    expect(after.data!.people.some((p) => p.role === "STUDENT" && p.page === 2)).toBe(true);
+    expect((await api(`/api/live/${greenwoodClassId}`, { token: rStudent })).status).toBe(404);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: rTeacher, body: JSON.stringify({ type: "page", page: 1 }) })).status).toBe(404);
+    const follow = await api<{ state: { follow: boolean } }>(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "follow", on: true }) });
+    expect(follow.data!.state.follow).toBe(true);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "close" }) })).status).toBe(200);
+    expect((await api<{ state: unknown }>(`/api/live/${greenwoodClassId}`, { token: gStudent })).data!.state).toBeNull();
+  });
   it("students and teachers never get a download disposition for PDFs", async () => {
     const r = await api(`/api/files/${greenwoodLesson.files[0].id}?download=1`, { token: gStudent });
     expect(r.status).toBe(200);

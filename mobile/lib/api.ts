@@ -85,6 +85,8 @@ export type SubjectSummary = { id: string; name: string; lessonCount: number; le
 export type SubjectDetail = SubjectSummary & { class: { id: string; name: string } };
 export type StudentGrades = { subjects: { id: string; name: string; rating: number | null; label: string }[]; overall: number | null; rank: number | null; showRank?: boolean; classSize: number; gradedStudents: number };
 export type StudentHome = { role: "STUDENT"; class: { id: string; name: string; academicYear: string | null } | null; totals: { lessons: number; learnt: number }; continueLessonId: string | null; subjects: SubjectSummary[]; grades?: StudentGrades | null };
+export type LiveState = { lessonId: string; fileId: string; page: number; follow: boolean; teacherId: string; updatedAt: string } | null;
+export type LivePresence = { id: string; name: string; role: "STUDENT" | "TEACHER"; page: number | null; at: number };
 export type Gradebook = {
   id: string;
   name: string;
@@ -127,6 +129,8 @@ export const api = {
   gradebook: (classId: string) => request<Gradebook>(`/api/mobile/classes/${classId}/grades`),
   setGrade: (classId: string, studentId: string, subjectId: string, rating: number | null) => request<{ overall: number | null; rank: number | null }>(`/api/mobile/classes/${classId}/grades`, { method: "POST", body: JSON.stringify({ studentId, subjectId, rating }) }),
   classDetail: (id: string) => request<ClassDetail>(`/api/mobile/classes/${id}`),
+  liveState: (classId: string) => request<{ state: LiveState; people: LivePresence[] }>(`/api/live/${classId}`),
+  liveCommand: (classId: string, command: Record<string, unknown>) => request<{ ok: boolean; state?: LiveState }>(`/api/live/${classId}`, { method: "POST", body: JSON.stringify(command) }),
   lesson: (id: string) => request<StudentLesson | TeacherLessonDetail>(`/api/mobile/lessons/${id}`),
   setLearnt: (id: string, learnt: boolean) => request<Progress>(`/api/mobile/lessons/${id}/learnt`, { method: "POST", body: JSON.stringify({ learnt }) }),
   logout: () => request<{ ok: true }>("/api/mobile/logout", { method: "POST" }),

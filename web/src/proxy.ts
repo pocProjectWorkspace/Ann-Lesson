@@ -8,6 +8,7 @@ const PROTECTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/student", roles: ["STUDENT"] },
   { prefix: "/account", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
   { prefix: "/board", roles: ["TEACHER", "SCHOOL_ADMIN"] },
+  { prefix: "/api/live", roles: ["SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
   { prefix: "/api/files", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
 ];
 
@@ -25,7 +26,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * another origin can call it. Allowed origins come from CORS_ORIGINS
  * (comma-separated). In development any local-network origin is allowed.
  */
-const CORS_PATHS = ["/api/mobile", "/api/files", "/api/exports", "/api/health"];
+const CORS_PATHS = ["/api/mobile", "/api/files", "/api/exports", "/api/health", "/api/live"];
 const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/;
 
 function corsOrigin(req: NextRequest) {
@@ -89,7 +90,7 @@ export async function proxy(req: NextRequest) {
   const bearer = pathname.startsWith("/api/") && auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : undefined;
   // The web-view hand-off token is accepted on the file route and on the reading-position
   // endpoint, which the embedded viewer calls from the mobile app without cookies.
-  const webviewPath = pathname.startsWith("/api/files/") || /^\/api\/mobile\/lessons\/[^/]+\/position$/.test(pathname);
+  const webviewPath = pathname.startsWith("/api/files/") || pathname.startsWith("/api/live/") || /^\/api\/mobile\/lessons\/[^/]+\/position$/.test(pathname);
   const queryToken = webviewPath ? req.nextUrl.searchParams.get("t") ?? undefined : undefined;
   const token = bearer ?? queryToken ?? req.cookies.get("lp_session")?.value;
   let role: string | null = null;
@@ -118,5 +119,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/account/:path*", "/board/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/mobile/:path*", "/api/exports/:path*", "/api/health"],
+  matcher: ["/login", "/account/:path*", "/board/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/mobile/:path*", "/api/live/:path*", "/api/exports/:path*", "/api/health"],
 };

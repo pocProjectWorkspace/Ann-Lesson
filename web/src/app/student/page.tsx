@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSchoolRole } from "@/lib/auth";
 import { studentHome } from "@/lib/data";
 import { studentGrades } from "@/lib/grades";
+import { LiveBanner } from "@/components/live/live-banner";
 import { Empty, ProgressBar, spineColor } from "@/components/ui";
 import { now } from "@/lib/time";
 
@@ -55,6 +56,8 @@ export default async function StudentHome() {
           </div>
         </div>
       </div>
+
+      <LiveBanner classId={home.class.id} />
 
       {cont && (
         <Link href={`/student/lessons/${cont.id}`} className="mt-7 flex items-center gap-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent-soft/60 px-5 py-4 transition hover:border-accent/60">

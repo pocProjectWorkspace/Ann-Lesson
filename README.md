@@ -243,6 +243,19 @@ pages, F toggles full screen. Drawings are saved per teacher, file and page
 (`BoardNote`) so the next lesson starts where the last one ended. Works in any browser,
 so no particular board hardware is needed.
 
+## Live classroom: remote, follow the teacher, class pulse
+
+Each class has a live room. The smart board joins it when opened and publishes which
+book and page it shows; the teacher's phone remote (`/teacher/classes/:id/remote` on the
+web, "Board remote" in the app) turns pages, switches follow on and off, picks a child
+and closes the board. With follow on, every student device turns to the board's page
+and is taken to the right lesson; with it off, students read alone and the board shows
+who is on which page (class pulse). The student home shows a "Your teacher's board is on"
+banner while a room is open. Transport is server-sent events (`GET /api/live/:classId/events`)
+with a polling fallback (`GET /api/live/:classId`); commands are
+`POST /api/live/:classId` (open, page, follow, pick, close for staff; here, leave for
+everyone). Room state is the `LiveSession` row; fan-out is in memory, per app instance.
+
 ## Grades and ranking
 
 Teachers rate each student in each subject from 1 (needs support) to 5 (excellent), either

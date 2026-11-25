@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { saveBoardNotes, type Stroke } from "@/app/board/actions";
+import { useLiveRoom } from "@/components/live/use-live-room";
 
 type Tool = "pen" | "highlighter" | "eraser" | "spotlight" | "cover" | "none";
 type Point = [number, number];
@@ -41,7 +42,7 @@ function formatTime(s: number) {
  * The board. One page at a time, sized to the screen, dark surround, big controls.
  * Keyboard: arrows turn pages, F toggles full screen, Escape drops the current tool.
  */
-export function SmartBoard({ lesson, files, currentFileId, students, saved, backHref }: { lesson: { id: string; title: string; subject: string; className: string }; files: { id: string; fileName: string }[]; currentFileId: string | null; students: string[]; saved: Record<number, Stroke[]>; backHref: string }) {
+export function SmartBoard({ lesson, files, currentFileId, students, saved, backHref }: { lesson: { id: string; title: string; subject: string; className: string; classId: string }; files: { id: string; fileName: string }[]; currentFileId: string | null; students: string[]; saved: Record<number, Stroke[]>; backHref: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const pageCanvas = useRef<HTMLCanvasElement>(null);
   const inkCanvas = useRef<HTMLCanvasElement>(null);
@@ -66,6 +67,44 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
   const [fullscreen, setFullscreen] = useState(false);
 
   const strokes = useMemo(() => notes[page] ?? [], [notes, page]);
+
+  /* ---------- live room: remote control, follow mode, who is in the room ---------- */
+  const pageRef = useRef(page);
+  const lastSentPage = useRef<number | null>(null);
+  const fileRef = useRef(currentFileId);
+  const room = useLiveRoom(lesson.classId, {
+    onPick: (name) => setPicked(name),
+    // A page chosen on the phone remote moves the board.
+    onState: (st) => {
+      if (!st || st.fileId !== fileRef.current || st.page === pageRef.current) return;
+      lastSentPage.current = st.page;
+      setPage(st.page);
+    },
+  });
+  const sendRef = useRef(room.send);
+  useEffect(() => {
+    sendRef.current = room.send;
+    pageRef.current = page;
+    fileRef.current = currentFileId;
+  });
+  const announced = useRef(false);
+  // Tell the room which book is open (once the page count is known), and keep the
+  // room's page in step with the board.
+  useEffect(() => {
+    if (status !== "ready" || !currentFileId || announced.current) return;
+    announced.current = true;
+    sendRef.current({ type: "open", lessonId: lesson.id, fileId: currentFileId, page }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, currentFileId, lesson.id]);
+  useEffect(() => {
+    if (!announced.current || !room.state || room.state.fileId !== currentFileId) return;
+    if (room.state.page === page || lastSentPage.current === page) return;
+    lastSentPage.current = page;
+    sendRef.current({ type: "page", page }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+  const follow = !!room.state?.follow;
+  const studentsHere = room.people.filter((p) => p.role === "STUDENT");
 
   /* ---------- open the document ---------- */
   useEffect(() => {
@@ -259,7 +298,7 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
     <div className="fixed inset-0 flex flex-col bg-[#0b0f1a] text-white select-none">
       {/* Top bar */}
       <header className="flex items-center gap-3 px-4 py-2 text-sm">
-        <a href={backHref} className="rounded-lg bg-white/10 px-3 py-1.5 font-semibold hover:bg-white/20">
+        <a href={backHref} onClick={() => { sendRef.current({ type: "close" }).catch(() => {}); }} className="rounded-lg bg-white/10 px-3 py-1.5 font-semibold hover:bg-white/20">
           ← Exit board
         </a>
         <div className="min-w-0 flex-1 truncate">
@@ -278,6 +317,9 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
             ))}
           </select>
         )}
+        <button type="button" onClick={() => sendRef.current({ type: "follow", on: !follow }).catch(() => {})} aria-pressed={follow} className={`rounded-lg px-3 py-1.5 font-semibold ${follow ? "bg-emerald-400 text-ink-950" : "bg-white/10 hover:bg-white/20"}`} title="When on, every student device turns the page with the board">
+          {follow ? `Following · ${studentsHere.length} student${studentsHere.length === 1 ? "" : "s"} · release` : `Students follow (${studentsHere.length} here)`}
+        </button>
         <span className="text-xs text-white/50" aria-live="polite">
           {saveState === "saving" ? "Saving…" : saveState === "failed" ? "Not saved" : "Saved"}
         </span>
@@ -365,6 +407,15 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
             <button type="button" onClick={() => setCover((c) => ({ ...c, fromTop: !c.fromTop }))} className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1.5 text-xs">
               Cover from the {cover.fromTop ? "bottom" : "top"} instead
             </button>
+          )}
+          {studentsHere.length > 0 && !follow && tool === "none" && (
+            <ul className="absolute left-3 top-3 flex max-w-[40%] flex-wrap gap-1.5 text-[11px]" aria-label="Students in the room and their page">
+              {studentsHere.map((p) => (
+                <li key={p.id} className={`rounded-full px-2 py-0.5 ${p.page === page ? "bg-emerald-400/90 text-ink-950" : "bg-white/15 text-white/80"}`}>
+                  {p.name.split(" ")[0]} {p.page ? `p.${p.page}` : ""}
+                </li>
+              ))}
+            </ul>
           )}
           {picked && (
             <div role="status" className="absolute right-4 top-4 rounded-2xl bg-white px-6 py-4 text-ink-950 shadow-2xl">

@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import { api } from "../lib/api";
+import { api, type LiveState } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCached } from "../lib/use-cached";
 import { Card, Empty, ErrorBox, Loading, Muted, OfflineBanner, ProgressBar, SpineCard, Subtitle, Title, colors, palette, setAccent } from "../lib/ui";
@@ -97,6 +97,7 @@ export default function HomeScreen() {
           </Pressable>
         ) : null}
 
+        {home?.role === "STUDENT" && home.class ? <LiveJoinCard classId={home.class.id} /> : null}
         {home?.role === "STUDENT" && home.grades && home.grades.subjects.some((s) => s.rating) ? (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -165,5 +166,34 @@ function Stat({ label, value }: { label: string; value: number }) {
       <Muted>{label}</Muted>
       <Text style={{ fontWeight: "700", color: palette.ink950, fontSize: 18, fontFamily: "serif" }}>{value}</Text>
     </View>
+  );
+}
+
+/** Student: while the class board is on, offer to open the book the teacher is showing. */
+function LiveJoinCard({ classId }: { classId: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<LiveState>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => api.liveState(classId).then((r) => !cancelled && setState(r.state)).catch(() => {});
+    const first = setTimeout(tick, 0);
+    const t = setInterval(tick, 5000);
+    return () => {
+      cancelled = true;
+      clearTimeout(first);
+      clearInterval(t);
+    };
+  }, [classId]);
+  if (!state) return null;
+  return (
+    <Pressable onPress={() => router.push({ pathname: "/viewer/[fileId]", params: { fileId: state.fileId, title: "Class book" } })} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, backgroundColor: "#dcf3e6", borderWidth: 1, borderColor: "#1f7a4d55" }}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#1f7a4d", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#fff" }} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontWeight: "700", color: "#1f7a4d", fontSize: 13 }}>Your teacher&apos;s board is on</Text>
+        <Text style={{ fontWeight: "700", color: palette.ink950, fontSize: 16, fontFamily: "serif" }}>{state.follow ? "Join the class and follow along" : "Open the book your teacher is showing"}</Text>
+      </View>
+    </Pressable>
   );
 }

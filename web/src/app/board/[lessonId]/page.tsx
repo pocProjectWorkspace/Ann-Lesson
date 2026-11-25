@@ -35,7 +35,7 @@ export default async function BoardPage({ params, searchParams }: { params: Prom
 
   return (
     <SmartBoard
-      lesson={{ id: lesson.id, title: lesson.title, subject: lesson.subject.name, className: `${cls.name}${cls.section ? " " + cls.section : ""}` }}
+      lesson={{ id: lesson.id, title: lesson.title, subject: lesson.subject.name, className: `${cls.name}${cls.section ? " " + cls.section : ""}`, classId: cls.id }}
       files={lesson.files}
       currentFileId={current?.id ?? null}
       students={cls.students.map((s) => s.name)}

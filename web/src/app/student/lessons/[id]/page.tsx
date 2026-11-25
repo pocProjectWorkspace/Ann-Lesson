@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSchoolRole } from "@/lib/auth";
 import { lessonForUser } from "@/lib/data";
 import { Empty, PageHeader } from "@/components/ui";
-import { PdfViewer } from "@/components/pdf-viewer";
+import { FollowingBook } from "@/components/live/follow-teacher";
 import { LearntForm } from "./learnt-form";
 
 export default async function StudentLesson({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ file?: string }> }) {
@@ -33,7 +33,18 @@ export default async function StudentLesson({ params, searchParams }: { params: 
         </nav>
       )}
 
-      {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} /> : <Empty>This lesson has no PDF yet.</Empty>}
+      {current ? (
+        <section className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-card" onContextMenu={undefined}>
+          <header className="flex items-center justify-between gap-2 border-b border-ink-100 px-4 py-2.5 text-sm">
+            <span className="truncate font-semibold text-ink-800">{current.fileName}</span>
+          </header>
+          <div className="p-2 sm:p-3">
+            <FollowingBook classId={lesson.class.id} lessonId={lesson.id} fileId={current.id} src={`/api/files/${current.id}`} title={current.fileName} watermark={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} hrefTemplate="/student/lessons/{lessonId}?file={fileId}" />
+          </div>
+        </section>
+      ) : (
+        <Empty>This lesson has no PDF yet.</Empty>
+      )}
 
       <nav aria-label="Previous and next lesson" className="mt-6 grid gap-3 sm:grid-cols-2">
         {lesson.prev ? (

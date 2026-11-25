@@ -72,16 +72,21 @@ function targetWidth() {
  *    reached as they read, so the dashboard shows a percentage and "Continue reading"
  *    resumes in the right place.
  */
-export function Flipbook({ src, title, watermark, track, onProgress }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void }) {
+export function Flipbook({ src, title, watermark, track, onProgress, followPage, onPage }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void; followPage?: number | null; onPage?: (page: number, pageCount: number) => void }) {
   const bookRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlip | null>(null);
   const currentRef = useRef(0);
+  const wakeRef = useRef<(() => void) | null>(null);
   // Latest props, readable from the long-lived render loop and event handlers.
   const trackRef = useRef(track);
   const onProgressRef = useRef(onProgress);
+  const onPageRef = useRef(onPage);
+  const followRef = useRef(followPage);
   useEffect(() => {
     trackRef.current = track;
     onProgressRef.current = onProgress;
+    onPageRef.current = onPage;
+    followRef.current = followPage;
   });
 
   // Debounced reporter: the latest page wins, and anything pending is flushed when the
@@ -179,6 +184,7 @@ export function Flipbook({ src, title, watermark, track, onProgress }: { src: st
     const urls: string[] = [];
     const done = new Set<number>();
     let wake: (() => void) | null = null;
+    wakeRef.current = () => wake?.();
 
     (async () => {
       const { PageFlip } = await import("page-flip");
@@ -229,10 +235,12 @@ export function Flipbook({ src, title, watermark, track, onProgress }: { src: st
         setCurrent(idx);
         wake?.(); // re-prioritise the render queue around the new page
         report(reached(idx), total);
+        onPageRef.current?.(idx + 1, total);
       });
       // Resume where the reader left off, and record the page count straight away so the
       // dashboard can show a percentage even before the first page turn.
-      const start = Math.min(Math.max((trackRef.current?.startPage ?? 1) - 1, 0), total - 1);
+      // The teacher's page wins over the student's own last page when following.
+      const start = Math.min(Math.max((followRef.current ?? trackRef.current?.startPage ?? 1) - 1, 0), total - 1);
       if (start > 0) {
         flip.turnToPage(start);
         currentRef.current = start;
@@ -312,6 +320,28 @@ export function Flipbook({ src, title, watermark, track, onProgress }: { src: st
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
   }, [doc, status.kind, ratio, watermark, report]);
+
+  // Follow the teacher: when the board moves to a page, turn to it (no animation jump
+  // across many pages; page-flip animates a single turn and jumps otherwise).
+  useEffect(() => {
+    if (!followPage || !flipRef.current) return;
+    const target = Math.max(0, followPage - 1);
+    if (currentRef.current === target) return;
+    const flip = flipRef.current;
+    // Deferred so the state update is not synchronous inside the effect.
+    const t = setTimeout(() => {
+      try {
+        if (Math.abs(currentRef.current - target) === 1) flip.flip(target);
+        else flip.turnToPage(target);
+        currentRef.current = target;
+        setCurrent(target);
+        wakeRef.current?.();
+      } catch {
+        /* not mounted yet */
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [followPage, status.kind]);
 
   const prev = useCallback(() => flipRef.current?.flipPrev(), []);
   const next = useCallback(() => flipRef.current?.flipNext(), []);

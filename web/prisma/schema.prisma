@@ -322,3 +322,22 @@ model BoardNote {
   @@unique([fileId, page, teacherId])
   @@index([fileId, teacherId])
 }
+
+/// The live classroom session of one class: what the board is showing and whether
+/// students follow it. One row per class; cleared when the teacher closes the board.
+/// Fan-out to connected devices is in memory (lib/live.ts); this row is the source of
+/// truth a device reads when it connects.
+model LiveSession {
+  id        String   @id @default(uuid())
+  schoolId  String
+  classId   String   @unique
+  teacherId String
+  lessonId  String
+  fileId    String
+  page      Int      @default(1)
+  follow    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
+}

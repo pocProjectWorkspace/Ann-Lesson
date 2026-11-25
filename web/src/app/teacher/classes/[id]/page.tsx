@@ -20,6 +20,7 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
         actions={
           <>
             <LinkButton href={`/teacher/classes/${cls.id}/grades`} variant="primary">Grades and ranking</LinkButton>
+            <LinkButton href={`/teacher/classes/${cls.id}/remote`}>Board remote</LinkButton>
             <LinkButton href={`/api/exports/progress.csv?classId=${cls.id}`}>Export progress</LinkButton>
           </>
         }
