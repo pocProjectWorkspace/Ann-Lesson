@@ -7,6 +7,7 @@ const PROTECTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/teacher", roles: ["TEACHER"] },
   { prefix: "/student", roles: ["STUDENT"] },
   { prefix: "/account", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
+  { prefix: "/board", roles: ["TEACHER", "SCHOOL_ADMIN"] },
   { prefix: "/api/files", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
 ];
 
@@ -117,5 +118,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/account/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/mobile/:path*", "/api/exports/:path*", "/api/health"],
+  matcher: ["/login", "/account/:path*", "/board/:path*", "/admin/:path*", "/school/:path*", "/teacher/:path*", "/student/:path*", "/api/files/:path*", "/api/mobile/:path*", "/api/exports/:path*", "/api/health"],
 };

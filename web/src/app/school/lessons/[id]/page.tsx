@@ -37,6 +37,7 @@ export default async function LessonDetail({ params, searchParams }: { params: P
             ) : lesson.files.length > 0 ? (
               <InlineAction action={publishLesson} hidden={{ id: lesson.id, publish: "yes" }} label="Publish to students" variant="primary" confirm={`Publish "${lesson.title}" to ${classTitle}? Students and teachers will be notified.`} />
             ) : null}
+            {current && <a href={`/board/${lesson.id}?file=${current.id}`} className="rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-ink-900 hover:bg-ink-100">Open on smart board</a>}
             <InlineAction action={deleteLesson} hidden={{ id: lesson.id }} label="Delete lesson" variant="danger" confirm={`Delete "${lesson.title}" and its PDFs?`} />
           </>
         }

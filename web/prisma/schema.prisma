@@ -81,6 +81,7 @@ model User {
 
   teachingAssignments TeacherAssignment[]
   progress            LessonProgress[]
+  boardNotes          BoardNote[]
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
   gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
@@ -176,6 +177,7 @@ model LessonFile {
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  boardNotes BoardNote[]
 
   @@index([lessonId])
 }
@@ -301,4 +303,22 @@ model SubjectGrade {
 
   @@unique([subjectId, studentId])
   @@index([schoolId, studentId])
+}
+
+/// What a teacher drew on one page of a book in smart board mode. Strokes are stored in
+/// page-relative coordinates (0..1) so they fit any screen. One row per teacher, file and page.
+model BoardNote {
+  id        String   @id @default(uuid())
+  schoolId  String
+  fileId    String
+  teacherId String
+  page      Int
+  strokes   Json
+  updatedAt DateTime @updatedAt
+
+  file    LessonFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  teacher User       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, page, teacherId])
+  @@index([fileId, teacherId])
 }

@@ -233,6 +233,16 @@ Publishing needs at least one PDF, records an audit entry, and sends the "new le
 notification to the class and its teachers. Unpublish hides the lesson again without losing
 progress. Lessons copied into a new class at year rollover keep their status.
 
+## Smart board
+
+`/board/:lessonId` is a full-screen view of a lesson's book for the interactive panel at
+the front of the class (teachers of the class and school admins; opened from the lesson
+page). One page at a time, sized to the screen, with pen in four colours, highlighter,
+eraser, a spotlight, a sliding cover, a timer and a random name picker. Arrow keys turn
+pages, F toggles full screen. Drawings are saved per teacher, file and page
+(`BoardNote`) so the next lesson starts where the last one ended. Works in any browser,
+so no particular board hardware is needed.
+
 ## Grades and ranking
 
 Teachers rate each student in each subject from 1 (needs support) to 5 (excellent), either
