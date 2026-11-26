@@ -5,7 +5,7 @@ import { useLiveRoom } from "./use-live-room";
 
 /** Phone-sized controls for the board: open a book, turn pages, follow on/off, pick a name, class pulse. */
 export function Remote({ classId, className, lessons, students, backHref }: { classId: string; className: string; lessons: { id: string; title: string; files: { id: string; fileName: string }[] }[]; students: string[]; backHref: string }) {
-  const { state, people, connected, send } = useLiveRoom(classId);
+  const { state, people, connected, send, submissions } = useLiveRoom(classId);
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const act = (c: Record<string, unknown>) =>
@@ -82,6 +82,9 @@ export function Remote({ classId, className, lessons, students, backHref }: { cl
                 ))}
               </select>
             )}
+            <button type="button" onClick={() => act(state.activity ? { type: "activity.close" } : { type: "activity.open", page: state.page })} className={`mt-2 w-full rounded-xl px-3 py-3 text-sm font-semibold ${state.activity ? "bg-amber-100 text-amber-900" : "border border-ink-200 text-ink-900"}`}>
+              {state.activity ? `Desks open on page ${state.activity.page} · ${submissions.length} drawing${submissions.length === 1 ? "" : "s"}, ${submissions.filter((s) => s.done).length} sent · close` : `Send page ${state.page} to desks`}
+            </button>
             <button type="button" onClick={() => act({ type: "close" })} className="mt-3 w-full rounded-xl border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700">
               Close the board for this class
             </button>

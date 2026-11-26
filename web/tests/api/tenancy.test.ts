@@ -88,6 +88,42 @@ describe("tenant isolation", () => {
     expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "close" }) })).status).toBe(200);
     expect((await api<{ state: unknown }>(`/api/live/${greenwoodClassId}`, { token: gStudent })).data!.state).toBeNull();
   });
+  it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
+    type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
+    const fileId = greenwoodLesson.files[0].id;
+    const stroke = { tool: "pen", color: "#1d4ed8", width: 0.01, points: [[0.1, 0.1], [0.2, 0.3]] };
+    // Nothing to send before a book is open.
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "activity.open" }) })).status).toBe(409);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "open", lessonId: greenwoodLesson.id, fileId, page: 1 }) })).status).toBe(200);
+    // Only the teacher opens an activity; it lands on the requested page with its prompt.
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "activity.open", page: 3 }) })).status).toBe(403);
+    const opened = await api<{ state: Room["state"] }>(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "activity.open", page: 3, prompt: "Circle the red things" }) });
+    expect(opened.status).toBe(200);
+    const activity = opened.data!.state!.activity!;
+    expect(activity.page).toBe(3);
+    expect(activity.prompt).toBe("Circle the red things");
+    // The student sees it, draws, and sends; staff cannot submit; bad ink is rejected.
+    expect((await api<Room>(`/api/live/${greenwoodClassId}`, { token: gStudent })).data!.state!.activity!.id).toBe(activity.id);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [stroke] }) })).status).toBe(403);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [{ ...stroke, color: "red" }] }) })).status).toBe(400);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: rStudent, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [stroke] }) })).status).toBe(404);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [stroke] }) })).status).toBe(200);
+    const sent = await api<{ done: boolean }>(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [stroke, stroke], done: true }) });
+    expect(sent.status).toBe(200);
+    expect(sent.data!.done).toBe(true);
+    // The board gets the wall; the student gets only their own card.
+    const wall = (await api<Room>(`/api/live/${greenwoodClassId}`, { token: gTeacher })).data!;
+    expect(wall.submissions).toHaveLength(1);
+    expect(wall.submissions[0].done).toBe(true);
+    const mine = (await api<Room>(`/api/live/${greenwoodClassId}`, { token: gStudent })).data!;
+    expect(mine.submissions.map((s) => s.studentId)).toEqual([wall.submissions[0].studentId]);
+    // Closing the activity keeps the book open but stops submissions.
+    const closed = await api<{ state: Room["state"] }>(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "activity.close" }) });
+    expect(closed.status).toBe(200);
+    expect(closed.data!.state!.activity).toBeNull();
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gStudent, body: JSON.stringify({ type: "activity.submit", activityId: activity.id, strokes: [stroke] }) })).status).toBe(409);
+    expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "close" }) })).status).toBe(200);
+  });
   it("students and teachers never get a download disposition for PDFs", async () => {
     const r = await api(`/api/files/${greenwoodLesson.files[0].id}?download=1`, { token: gStudent });
     expect(r.status).toBe(200);

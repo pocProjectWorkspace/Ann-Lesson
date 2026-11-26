@@ -82,6 +82,7 @@ model User {
   teachingAssignments TeacherAssignment[]
   progress            LessonProgress[]
   boardNotes          BoardNote[]
+  activitySubmissions ActivitySubmission[]
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
   gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
@@ -336,8 +337,44 @@ model LiveSession {
   fileId    String
   page      Int      @default(1)
   follow    Boolean  @default(false)
+  activityId String? // the activity currently on the students' desks, if any
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
   @@index([schoolId])
+}
+
+/// Board-to-desk: a page the teacher sent to the class as an activity. Children draw on
+/// it on their devices; their strokes come back as submissions and show on the board.
+model Activity {
+  id        String    @id @default(uuid())
+  schoolId  String
+  classId   String
+  lessonId  String
+  fileId    String
+  page      Int
+  prompt    String?
+  teacherId String
+  status    String    @default("OPEN") // OPEN | CLOSED
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
+
+  submissions ActivitySubmission[]
+
+  @@index([classId, createdAt])
+}
+
+model ActivitySubmission {
+  id          String    @id @default(uuid())
+  activityId  String
+  studentId   String
+  strokes     Json
+  done        Boolean   @default(false)
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, studentId])
 }

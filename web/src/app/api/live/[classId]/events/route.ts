@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ classId: st
       send({ type: "state", state: await stateOf(classId) });
       touch(classId, { id: session.userId, name: session.name, role, page: null });
       send({ type: "presence", people: people(classId) });
-      unsubscribe = subscribe(classId, send);
+      unsubscribe = subscribe(classId, send, { userId: session.userId, controls: access.controls });
       heartbeat = setInterval(() => {
         try {
           send({ type: "ping" });

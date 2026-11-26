@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type LiveState = { lessonId: string; fileId: string; page: number; follow: boolean; teacherId: string; updatedAt: string } | null;
+import type { Stroke } from "./ink";
+export type LiveActivity = { id: string; lessonId: string; fileId: string; page: number; prompt: string | null; createdAt: string };
+export type LiveState = { lessonId: string; fileId: string; page: number; follow: boolean; teacherId: string; updatedAt: string; activity: LiveActivity | null } | null;
 export type Presence = { id: string; name: string; role: "STUDENT" | "TEACHER"; page: number | null; at: number };
-type LiveEvent = { type: "state"; state: LiveState } | { type: "presence"; people: Presence[] } | { type: "pick"; name: string } | { type: "ping" };
+export type Submission = { studentId: string; name: string; strokes: Stroke[]; done: boolean; updatedAt: string };
+type LiveEvent = { type: "state"; state: LiveState } | { type: "presence"; people: Presence[] } | { type: "pick"; name: string } | { type: "submission"; activityId: string; submission: Submission } | { type: "ping" };
 
 /**
  * Join a class's live room from the browser. Subscribes over server-sent events and
@@ -15,6 +18,8 @@ export function useLiveRoom(classId: string | null, opts: { token?: string; onPi
   const [state, setState] = useState<LiveState>(null);
   const [people, setPeople] = useState<Presence[]>([]);
   const [connected, setConnected] = useState(false);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const activityRef = useRef<string | null>(null);
   const onPickRef = useRef(opts.onPick);
   const onStateRef = useRef(opts.onState);
   useEffect(() => {
@@ -29,12 +34,29 @@ export function useLiveRoom(classId: string | null, opts: { token?: string; onPi
     let poll: ReturnType<typeof setInterval> | null = null;
     let closed = false;
 
+    const loadSubmissions = async () => {
+      try {
+        const r = await fetch(`/api/live/${classId}${qs}`, { cache: "no-store" });
+        if (r.ok) setSubmissions(((await r.json()) as { submissions?: Submission[] }).submissions ?? []);
+      } catch {
+        /* offline */
+      }
+    };
+    const applyState = (st: LiveState) => {
+      const nextId = st?.activity?.id ?? null;
+      if (nextId !== activityRef.current) {
+        activityRef.current = nextId;
+        setSubmissions([]);
+        if (nextId) void loadSubmissions();
+      }
+      setState(st);
+      onStateRef.current?.(st);
+    };
     const apply = (e: LiveEvent) => {
-      if (e.type === "state") {
-        setState(e.state);
-        onStateRef.current?.(e.state);
-      } else if (e.type === "presence") setPeople(e.people);
+      if (e.type === "state") applyState(e.state);
+      else if (e.type === "presence") setPeople(e.people);
       else if (e.type === "pick") onPickRef.current?.(e.name);
+      else if (e.type === "submission" && e.activityId === activityRef.current) setSubmissions((list) => [...list.filter((s) => s.studentId !== e.submission.studentId), e.submission]);
     };
     const startPolling = () => {
       if (poll) return;
@@ -42,10 +64,10 @@ export function useLiveRoom(classId: string | null, opts: { token?: string; onPi
         try {
           const r = await fetch(`/api/live/${classId}${qs}`, { cache: "no-store" });
           if (r.ok) {
-            const j = (await r.json()) as { state: LiveState; people: Presence[] };
-            setState(j.state);
-            onStateRef.current?.(j.state);
+            const j = (await r.json()) as { state: LiveState; people: Presence[]; submissions?: Submission[] };
+            applyState(j.state);
             setPeople(j.people);
+            setSubmissions(j.submissions ?? []);
           }
         } catch {
           /* offline */
@@ -88,5 +110,5 @@ export function useLiveRoom(classId: string | null, opts: { token?: string; onPi
     [classId, qs],
   );
 
-  return { state, people, connected, send };
+  return { state, people, connected, send, submissions };
 }

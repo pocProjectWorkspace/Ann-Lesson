@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { saveBoardNotes, type Stroke } from "@/app/board/actions";
 import { useLiveRoom } from "@/components/live/use-live-room";
+import { DeskWall } from "@/components/live/desk-wall";
 
 type Tool = "pen" | "highlighter" | "eraser" | "spotlight" | "cover" | "none";
 type Point = [number, number];
@@ -105,6 +106,14 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
   }, [page]);
   const follow = !!room.state?.follow;
   const studentsHere = room.people.filter((p) => p.role === "STUDENT");
+  const activity = room.state?.activity ?? null;
+  const [prompting, setPrompting] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const sendToDesks = () => {
+    sendRef.current({ type: "activity.open", page, prompt: prompt.trim() || undefined }).catch(() => {});
+    setPrompting(false);
+    setPrompt("");
+  };
 
   /* ---------- open the document ---------- */
   useEffect(() => {
@@ -320,6 +329,9 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
         <button type="button" onClick={() => sendRef.current({ type: "follow", on: !follow }).catch(() => {})} aria-pressed={follow} className={`rounded-lg px-3 py-1.5 font-semibold ${follow ? "bg-emerald-400 text-ink-950" : "bg-white/10 hover:bg-white/20"}`} title="When on, every student device turns the page with the board">
           {follow ? `Following · ${studentsHere.length} student${studentsHere.length === 1 ? "" : "s"} · release` : `Students follow (${studentsHere.length} here)`}
         </button>
+        <button type="button" onClick={() => (activity ? sendRef.current({ type: "activity.close" }).catch(() => {}) : setPrompting(true))} className={`rounded-lg px-3 py-1.5 font-semibold ${activity ? "bg-amber-300 text-ink-950" : "bg-white/10 hover:bg-white/20"}`} title="Send this page to every student device as an activity">
+          {activity ? "Desks open · close" : "Send page to desks"}
+        </button>
         <span className="text-xs text-white/50" aria-live="polite">
           {saveState === "saving" ? "Saving…" : saveState === "failed" ? "Not saved" : "Saved"}
         </span>
@@ -416,6 +428,20 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
                 </li>
               ))}
             </ul>
+          )}
+          {prompting && (
+            <form onSubmit={(e) => { e.preventDefault(); sendToDesks(); }} className="absolute left-1/2 top-6 z-20 w-[min(32rem,90%)] -translate-x-1/2 rounded-2xl bg-white p-4 text-ink-950 shadow-2xl">
+              <div className="font-display text-lg">Send page {page} to the desks</div>
+              <p className="mt-1 text-sm text-ink-500">Every student device opens this page to draw on. Add a short instruction if you like.</p>
+              <input autoFocus value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={300} placeholder="e.g. Circle the apples" className="mt-3 w-full rounded-lg border border-ink-200 px-3 py-2 text-sm" aria-label="Instruction for students" />
+              <div className="mt-3 flex justify-end gap-2">
+                <button type="button" onClick={() => setPrompting(false)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-ink-600">Cancel</button>
+                <button type="submit" className="rounded-lg bg-ink-950 px-4 py-1.5 text-sm font-semibold text-white">Send to {studentsHere.length || "the"} student{studentsHere.length === 1 ? "" : "s"}</button>
+              </div>
+            </form>
+          )}
+          {activity && currentFileId && (
+            <DeskWall activity={activity} src={`/api/files/${activity.fileId}`} submissions={room.submissions} people={room.people} onClose={() => sendRef.current({ type: "activity.close" }).catch(() => {})} />
           )}
           {picked && (
             <div role="status" className="absolute right-4 top-4 rounded-2xl bg-white px-6 py-4 text-ink-950 shadow-2xl">

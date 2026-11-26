@@ -256,6 +256,24 @@ with a polling fallback (`GET /api/live/:classId`); commands are
 `POST /api/live/:classId` (open, page, follow, pick, close for staff; here, leave for
 everyone). Room state is the `LiveSession` row; fan-out is in memory, per app instance.
 
+## Board to desk: activities
+
+The teacher sends the page on the board to every student device as an activity, with an
+optional one-line instruction ("Circle the apple"). Each child's screen turns into a
+drawing pad over that page: a few colours, an eraser, clear, and "Send to teacher". Work
+is saved to the room every couple of seconds while the child draws, so the board's desk
+wall fills in live: one thumbnail per child, children in the room who have not drawn yet
+shown as "working…", a green frame once the work is sent, tap a card to enlarge it.
+Closing the activity returns everyone to the book. The board button is "Send page to
+desks"; the phone remote has the same button with drawing and sent counts.
+
+Commands on `POST /api/live/:classId`: `activity.open {page?, prompt?}` and
+`activity.close` for staff, `activity.submit {activityId, strokes, done?}` for students.
+Submissions are `ActivitySubmission` rows (strokes in page-relative coordinates, like
+board notes) under an `Activity`; closing the board closes any open activity. Over the
+event stream a child's submission reaches staff and that child only, never classmates,
+and `GET /api/live/:classId` returns all submissions to staff and only their own to a student.
+
 ## Grades and ranking
 
 Teachers rate each student in each subject from 1 (needs support) to 5 (excellent), either

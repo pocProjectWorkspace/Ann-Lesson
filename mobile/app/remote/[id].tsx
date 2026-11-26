@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { api, type LivePresence, type LiveState } from "../../lib/api";
+import { api, type LivePresence, type LiveState, type LiveSubmission } from "../../lib/api";
 import { useCached } from "../../lib/use-cached";
 import { Badge, Button, Card, Empty, ErrorBox, Loading, Muted, colors, palette } from "../../lib/ui";
 
 /**
  * Teacher's phone remote for the smart board. Polls the room every two seconds (React
- * Native has no EventSource) and sends page, follow, pick and close commands.
+ * Native has no EventSource) and sends page, follow, pick, activity and close commands.
  */
 export default function RemoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: cls, error: loadError } = useCached(`class:${id}`, () => api.classDetail(id), [id]);
   const [state, setState] = useState<LiveState>(null);
   const [people, setPeople] = useState<LivePresence[]>([]);
+  const [submissions, setSubmissions] = useState<LiveSubmission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const busy = useRef(false);
@@ -23,6 +24,7 @@ export default function RemoteScreen() {
       const r = await api.liveState(id);
       setState(r.state);
       setPeople(r.people);
+      setSubmissions(r.submissions ?? []);
     } catch {
       /* keep the last known state */
     }
@@ -107,6 +109,12 @@ export default function RemoteScreen() {
                   }}
                 />
               </View>
+              <Button
+                title={state.activity ? `Desks open on page ${state.activity.page} · ${submissions.length} drawing${submissions.length === 1 ? "" : "s"}, ${submissions.filter((s) => s.done).length} sent · close` : `Send page ${state.page} to desks`}
+                variant={state.activity ? "primary" : "secondary"}
+                style={{ marginTop: 8 }}
+                onPress={() => act(state.activity ? { type: "activity.close" } : { type: "activity.open", page: state.page })}
+              />
               <Button title="Close the board" variant="secondary" style={{ marginTop: 8 }} onPress={() => act({ type: "close" })} />
             </Card>
             <Card>
