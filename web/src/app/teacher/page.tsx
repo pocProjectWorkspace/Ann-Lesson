@@ -28,7 +28,8 @@ export default async function TeacherHome() {
                     <Stat label="Lessons" value={c.lessonCount} />
                     <Stat label="Students" value={c.studentCount} />
                   </dl>
-                  <div className="mt-4 text-sm text-ink-500">{c.lessonCount && c.studentCount ? `${c.learntPercent}% of lessons learnt across the class` : "No progress yet"}</div>
+                  {c.lessonCount > 0 && <Spines count={c.lessonCount} percent={c.learntPercent} />}
+                  <div className="mt-3 text-sm text-ink-500">{c.lessonCount && c.studentCount ? `${c.learntPercent}% of lessons learnt across the class` : "No progress yet"}</div>
                   {(alertCounts.get(c.id) ?? 0) > 0 && <div className="mt-2 inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">{alertCounts.get(c.id)} {alertCounts.get(c.id) === 1 ? "child needs" : "children need"} a hand</div>}
                 </div>
               </Link>
@@ -37,6 +38,22 @@ export default async function TeacherHome() {
         </ul>
       )}
     </>
+  );
+}
+
+/** The class's books as spines on a shelf; the learnt share is coloured in. */
+function Spines({ count, percent }: { count: number; percent: number }) {
+  const n = Math.min(count, 24);
+  const filled = Math.round((percent / 100) * n);
+  return (
+    <div className="mt-4" role="img" aria-label={`${count} lessons, ${percent}% learnt`}>
+      <div className="flex items-end gap-[3px]">
+        {Array.from({ length: n }, (_, i) => (
+          <span key={i} className={`w-2 rounded-t-sm ${i < filled ? "bg-accent" : "bg-ink-200"}`} style={{ height: 14 + ((i * 7) % 3) * 3 }} />
+        ))}
+      </div>
+      <div className="h-1.5 rounded-sm" style={{ background: "linear-gradient(#c58d55, #a8703f)" }} />
+    </div>
   );
 }
 

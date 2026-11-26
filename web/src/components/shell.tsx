@@ -15,7 +15,7 @@ const roleLabels = {
 
 function Mark() {
   return (
-    <span aria-hidden className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg shadow-sm">
+    <span aria-hidden className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-fg shadow-sm">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
         <path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20" />
@@ -135,7 +135,7 @@ export async function AppShell({ session, nav, schoolName, children }: { session
         </div>
         <div className="mt-auto border-t border-white/10 px-4 py-4">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-sm font-bold">{initials(session.name)}</span>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-accent-soft text-sm font-extrabold text-ink-950">{initials(session.name)}</span>
             <div className="min-w-0 flex-1 leading-tight">
               <Link href="/account" className="block truncate text-sm font-semibold hover:underline">
                 {session.name}

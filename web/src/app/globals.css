@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), var(--font-nunito), system-ui, sans-serif;
 
   /* Paper and ink */
-  --color-paper: #f4f5f7;
-  --color-paper-deep: #e9ebef;
-  --color-ink-950: #0e1626;
-  --color-ink-900: #152036;
-  --color-ink-800: #1f2d49;
-  --color-ink-700: #2f3f5e;
-  --color-ink-500: #5c6b87;
-  --color-ink-400: #60708a;
-  --color-ink-300: #b4bdcc;
-  --color-ink-200: #d9dee7;
-  --color-ink-100: #eceff4;
+  --color-paper: #f6f2ea;
+  --color-paper-deep: #ebe4d6;
+  --color-ink-950: #2a1f3d;
+  --color-ink-900: #352a4a;
+  --color-ink-800: #463a5e;
+  --color-ink-700: #5a4e72;
+  --color-ink-500: #776d8c;
+  --color-ink-400: #968ca8;
+  --color-ink-300: #c3bccf;
+  --color-ink-200: #e0dae7;
+  --color-ink-100: #efeaf2;
 
   /* Semantic */
   --color-leaf-600: #1f7a4d;
@@ -32,9 +32,9 @@
   --color-violet-600: #4f46e5;
   --color-violet-100: #e4e3fb;
 
-  --shadow-card: 0 1px 2px rgb(14 22 38 / 0.05), 0 8px 24px -16px rgb(14 22 38 / 0.18);
-  --shadow-lift: 0 1px 2px rgb(14 22 38 / 0.06), 0 16px 40px -20px rgb(14 22 38 / 0.28);
-  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgb(42 31 61 / 0.05), 0 10px 24px -16px rgb(42 31 61 / 0.2);
+  --shadow-lift: 0 1px 2px rgb(42 31 61 / 0.06), 0 18px 40px -20px rgb(42 31 61 / 0.3);
+  --radius-card: 16px;
 }
 
 /* Role accent, set on the shell via data-role and consumed as bg-accent etc. */
@@ -46,18 +46,18 @@
 
 :root,
 [data-role="SUPER_ADMIN"] {
-  --accent: #4f46e5;
-  --accent-soft: #e4e3fb;
+  --accent: #6d4aa6;
+  --accent-soft: #ebe3f7;
   --accent-fg: #ffffff;
 }
 [data-role="SCHOOL_ADMIN"] {
-  --accent: #2360c8;
-  --accent-soft: #dde8fb;
+  --accent: #0f8b8d;
+  --accent-soft: #d7f1ee;
   --accent-fg: #ffffff;
 }
 [data-role="TEACHER"] {
-  --accent: #0f766e;
-  --accent-soft: #d5efeb;
+  --accent: #3a7d44;
+  --accent-soft: #dcefe0;
   --accent-fg: #ffffff;
 }
 [data-role="STUDENT"] {
@@ -160,8 +160,8 @@ h2,
 h3,
 .font-display {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 /* Grid and flex children must be allowed to shrink below their content width,

@@ -258,8 +258,11 @@ everyone). Room state is the `LiveSession` row; fan-out is in memory, per app in
 
 ## Design: two worlds
 
-The adult side (owner, school admin, teacher) keeps the calm sidebar layout. Students
-and parents get the **child world** (`data-world="child"` on the shell, tokens in
+One family in two moods. The **adult side** (owner, school admin, teacher) keeps the
+sidebar layout, now in the same plum ink on warm paper, Baloo 2 headings at a calmer
+weight with Nunito text, a per-role accent (plum for the owner, lagoon for school admins,
+moss for teachers), pill buttons, softer cards, an illustrated empty shelf for empty states
+and a tiny shelf of spines on each class card. Students and parents get the **child world** (`data-world="child"` on the shell, tokens in
 `globals.css`): warm oat paper, plum ink, a lagoon accent and sunflower for rewards,
 Baloo 2 for headings with Nunito for text, 17px base size, no sidebar (a small top bar
 with the child's animal avatar, the bell and sign out), and bigger tap targets.

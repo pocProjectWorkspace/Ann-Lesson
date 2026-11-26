@@ -14,7 +14,7 @@ const buttonStyles: Record<Variant, string> = {
   ghost: "text-ink-700 hover:bg-ink-100",
 };
 
-const buttonBase = "inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed";
+const buttonBase = "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed";
 
 export function Button({ className, variant = "primary", ...props }: ComponentProps<"button"> & { variant?: Variant }) {
   return <button className={cx(buttonBase, buttonStyles[variant], className)} {...props} />;
@@ -25,7 +25,7 @@ export function LinkButton({ className, variant = "secondary", ...props }: Compo
 }
 
 const inputBase =
-  "block w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-[15px] text-ink-900 placeholder:text-ink-400 transition focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent-soft";
+  "block w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-[15px] text-ink-900 placeholder:text-ink-400 transition focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent-soft";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cx(inputBase, className)} {...props} />;
@@ -67,7 +67,7 @@ export function Card({
       {(title || actions) && (
         <header className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
           <div>
-            {title && <h2 className="text-lg text-ink-900">{title}</h2>}
+            {title && <h2 className="text-[19px] text-ink-950">{title}</h2>}
             {description && <p className="mt-0.5 text-sm text-ink-500">{description}</p>}
           </div>
           {actions}
@@ -108,7 +108,7 @@ export function PageHeader({
             ))}
           </nav>
         )}
-        <h1 className="text-[28px] leading-tight text-ink-950 sm:text-[32px]">{title}</h1>
+        <h1 className="text-[30px] leading-tight text-ink-950 sm:text-[34px]">{title}</h1>
         {subtitle && <p className="mt-1.5 max-w-2xl text-[15px] text-ink-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -142,8 +142,9 @@ export function Td({ children, className }: { children: ReactNode; className?: s
 
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-ink-300 bg-paper/60 px-6 py-10 text-center">
-      <p className="mx-auto max-w-md text-sm leading-relaxed text-ink-500">{children}</p>
+    <div className="rounded-2xl border border-dashed border-ink-300 bg-paper/60 px-6 py-8 text-center">
+      <EmptyShelf />
+      <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-500">{children}</p>
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
@@ -206,3 +207,16 @@ export function Numeral({ n, done }: { n: number; done?: boolean }) {
 /** Coloured spine used on subject cards, cycling through a fixed bookshelf palette. */
 export const spineColors = ["#2360c8", "#0f766e", "#9c5d0b", "#4f46e5", "#b4323f", "#1f7a4d", "#7c3aed", "#0369a1"];
 export const spineColor = (i: number) => spineColors[i % spineColors.length];
+
+/** A small empty shelf, drawn inline, for empty states: an invitation rather than a grey box. */
+function EmptyShelf() {
+  return (
+    <svg aria-hidden width="120" height="56" viewBox="0 0 120 56" className="mx-auto block">
+      <rect x="18" y="20" width="14" height="24" rx="2" fill="var(--color-ink-200)" />
+      <rect x="36" y="14" width="12" height="30" rx="2" fill="var(--accent-soft)" />
+      <rect x="52" y="24" width="16" height="20" rx="2" fill="var(--color-ink-200)" transform="rotate(-8 60 44)" />
+      <rect x="8" y="44" width="104" height="6" rx="2" fill="#b07a45" />
+      <rect x="8" y="50" width="104" height="3" rx="1" fill="#8a5a2e" />
+    </svg>
+  );
+}

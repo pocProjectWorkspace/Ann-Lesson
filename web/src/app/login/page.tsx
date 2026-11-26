@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {/* Left: the bookshelf */}
       <aside aria-label="About Lesson Plan" className="relative hidden overflow-hidden bg-ink-950 px-12 py-14 text-white lg:flex lg:flex-col">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-violet-600">
+          <span className="grid h-10 w-10 place-items-center rounded-2xl" style={{ background: "#0f8b8d" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
               <path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20" />
@@ -44,12 +44,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {/* Books, drawn in CSS */}
         <div aria-hidden className="pointer-events-none absolute -right-6 bottom-0 flex items-end gap-2 opacity-90">
           {[
-            ["#2360c8", 230, 42],
-            ["#c77a12", 190, 34],
-            ["#0f766e", 260, 48],
-            ["#4f46e5", 210, 38],
-            ["#b4323f", 175, 30],
-            ["#1f7a4d", 245, 44],
+            ["#2f6f73", 230, 42],
+            ["#c08a1e", 190, 34],
+            ["#0f8b8d", 260, 48],
+            ["#8a4b9c", 210, 38],
+            ["#b4532a", 175, 30],
+            ["#2e7d4f", 245, 44],
           ].map(([c, h, w], i) => (
             <div key={i} className="rounded-t-md shadow-lift" style={{ background: c as string, height: h as number, width: w as number }}>
               <div className="mx-auto mt-4 h-[60%] w-[3px] rounded bg-white/25" />
