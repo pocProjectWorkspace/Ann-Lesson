@@ -32,6 +32,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
         actions={
           <>
             {current && <LinkButton href={`/board/${lesson.id}?file=${current.id}`} variant="primary">Open on smart board</LinkButton>}
+            <LinkButton href={`/teacher/lessons/${lesson.id}/insights`}>Page insights</LinkButton>
             {current && <LinkButton href={`/teacher/lessons/${lesson.id}/narrate?file=${current.id}`}>{narration ? `Read to me (${narration.pages.length} page${narration.pages.length === 1 ? "" : "s"})` : "Record read to me"}</LinkButton>}
             <LinkButton href={`/api/exports/progress.csv?classId=${lesson.class.id}`}>Export class progress</LinkButton>
           </>

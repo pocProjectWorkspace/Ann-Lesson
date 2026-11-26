@@ -107,7 +107,8 @@ export type TeacherHome = { role: "TEACHER"; classes: ClassSummary[] };
 export type Home = StudentHome | TeacherHome;
 
 export type TeacherLesson = { id: string; title: string; description: string | null; fileCount: number; published?: boolean; viewedCount: number; learntCount: number; confirmedCount: number };
-export type ClassDetail = { id: string; name: string; academicYear: string | null; studentCount: number; subjects: { id: string; name: string; lessons: TeacherLesson[] }[] };
+export type SupportAlert = { id: string; studentId: string; studentName: string; kind: string; lessonId: string | null; lessonTitle: string | null; page: number | null; detail: string; action: string; createdAt: string };
+export type ClassDetail = { id: string; name: string; academicYear: string | null; studentCount: number; subjects: { id: string; name: string; lessons: TeacherLesson[] }[]; alerts?: SupportAlert[] };
 
 export type LessonFile = { id: string; fileName: string; sizeBytes: number; url: string; viewerPath: string };
 export type LessonBase = {
@@ -136,6 +137,7 @@ export const api = {
   gradebook: (classId: string) => request<Gradebook>(`/api/mobile/classes/${classId}/grades`),
   setGrade: (classId: string, studentId: string, subjectId: string, rating: number | null) => request<{ overall: number | null; rank: number | null }>(`/api/mobile/classes/${classId}/grades`, { method: "POST", body: JSON.stringify({ studentId, subjectId, rating }) }),
   classDetail: (id: string) => request<ClassDetail>(`/api/mobile/classes/${id}`),
+  handleAlert: (classId: string, alertId: string) => request<{ ok: true }>(`/api/mobile/classes/${classId}/alerts`, { method: "POST", body: JSON.stringify({ alertId }) }),
   classStickers: (classId: string) => request<ClassStickers>(`/api/mobile/classes/${classId}/stickers`),
   giveSticker: (classId: string, studentIds: string[], kind: string, note?: string) => request<{ ok: true; given: string[] }>(`/api/mobile/classes/${classId}/stickers`, { method: "POST", body: JSON.stringify({ studentIds, kind, note }) }),
   liveState: (classId: string) => request<{ state: LiveState; people: LivePresence[]; submissions: LiveSubmission[] }>(`/api/live/${classId}`),

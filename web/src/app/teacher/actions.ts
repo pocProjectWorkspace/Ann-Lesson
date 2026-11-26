@@ -8,6 +8,7 @@ import { notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/utils";
 import { giveSticker, isTeacherSticker, stickerKind } from "@/lib/stickers";
+import { handleAlert } from "@/lib/insights";
 
 async function teacherLesson(teacherId: string, lessonId: string) {
   return db.lesson.findFirst({ where: { id: lessonId, subject: { class: { teachers: { some: { teacherId } } } } }, include: { subject: { select: { classId: true, name: true } } } });
@@ -109,4 +110,16 @@ export async function giveStickers(_prev: ActionState, formData: FormData): Prom
   revalidatePath("/student");
   const k = stickerKind(kind);
   return { success: `${k.emoji} ${k.label} given to ${given.map((s) => s.name.split(" ")[0]).join(", ")}` };
+}
+
+/** Teacher marks an early-support alert as handled. */
+export async function markAlertHandled(formData: FormData) {
+  const session = await requireSchoolRole("TEACHER");
+  const parsed = z.object({ alertId: z.string().uuid(), classId: z.string().uuid() }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const teaches = await db.teacherAssignment.findFirst({ where: { teacherId: session.userId, classId: parsed.data.classId }, select: { id: true } });
+  if (!teaches) return;
+  await handleAlert(parsed.data.alertId, parsed.data.classId, session.userId);
+  revalidatePath(`/teacher/classes/${parsed.data.classId}`);
+  revalidatePath("/teacher");
 }

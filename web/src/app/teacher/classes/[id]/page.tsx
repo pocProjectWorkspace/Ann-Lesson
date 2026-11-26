@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { requireSchoolRole } from "@/lib/auth";
 import { teacherClass } from "@/lib/data";
 import { Badge, Card, Empty, LinkButton, PageHeader, ProgressBar } from "@/components/ui";
+import { syncSupportAlerts } from "@/lib/insights";
+import { NeedsAHand } from "@/components/needs-a-hand";
+import { markAlertHandled } from "../../actions";
 
 export default async function TeacherClass({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSchoolRole("TEACHER");
@@ -10,6 +13,7 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
   const cls = await teacherClass(session.userId, id);
   if (!cls) notFound();
   const n = cls.studentCount;
+  const alerts = await syncSupportAlerts(cls.id);
 
   return (
     <>
@@ -26,6 +30,9 @@ export default async function TeacherClass({ params }: { params: Promise<{ id: s
           </>
         }
       />
+      <div className="mb-5">
+        <NeedsAHand classId={cls.id} alerts={alerts} onHandle={markAlertHandled} />
+      </div>
       {cls.subjects.length === 0 ? (
         <Empty>No subjects have been added to this class yet.</Empty>
       ) : (

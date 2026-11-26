@@ -3,9 +3,11 @@ import { db } from "@/lib/db";
 import { ApiError, json, readJson, withAuth } from "@/lib/api";
 import { progressState, readPercent } from "@/lib/data";
 import { awardBadges, recordReadingDay } from "@/lib/stickers";
+import { recordDwell } from "@/lib/insights";
 
 /**
- * POST /api/mobile/lessons/:id/position  { page, pageCount, day? }  (student)
+ * POST /api/mobile/lessons/:id/position  { page, pageCount, day?, dwell? }  (student)
+ * "dwell" lists pages just left and how long they were on screen, for page insights.
  * "day" is the device's local date (YYYY-MM-DD) and counts towards the reading streak;
  * the response carries the streak and any badges this page turn earned.
  * Called by the book viewer as the student turns pages. Records the current page, the
@@ -14,7 +16,7 @@ import { awardBadges, recordReadingDay } from "@/lib/stickers";
  * confirms). Accepts the web-view hand-off token (?t=) as well as a session, see proxy.ts.
  */
 export const POST = withAuth<{ id: string }>(["STUDENT"], async (req, session, { id }) => {
-  const body = z.object({ page: z.number().int().min(1).max(100_000), pageCount: z.number().int().min(1).max(100_000), day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).safeParse(await readJson(req));
+  const body = z.object({ page: z.number().int().min(1).max(100_000), pageCount: z.number().int().min(1).max(100_000), day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), dwell: z.array(z.object({ page: z.number().int().min(1).max(100_000), ms: z.number().min(0).max(86_400_000) })).max(20).optional() }).safeParse(await readJson(req));
   if (!body.success) throw new ApiError(400, "Body must be { page, pageCount }");
   const page = Math.min(body.data.page, body.data.pageCount);
   const pageCount = body.data.pageCount;
@@ -33,6 +35,7 @@ export const POST = withAuth<{ id: string }>(["STUDENT"], async (req, session, {
     create: { studentId: session.userId, lessonId: lesson.id, lastPage: page, maxPage, pageCount, finishedAt },
     update: { lastPage: page, maxPage, pageCount, finishedAt, lastViewedAt: new Date() },
   });
+  if (body.data.dwell?.length) await recordDwell(session.userId, lesson.id, body.data.dwell);
   const streak = await recordReadingDay(session.userId, body.data.day, existing?.lastPage !== page);
   const earned = await awardBadges(session.userId, { lessonId: lesson.id });
   return json({

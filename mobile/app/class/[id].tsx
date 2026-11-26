@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../lib/api";
@@ -7,7 +8,20 @@ import { Badge, Button, Card, Empty, ErrorBox, Loading, Muted, OfflineBanner, Pr
 export default function ClassScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: cls, error, offline, cachedAt, refreshing, refresh } = useCached(`class:${id}`, () => api.classDetail(id), [id]);
+  const { data: cls, setData, error, offline, cachedAt, refreshing, refresh } = useCached(`class:${id}`, () => api.classDetail(id), [id]);
+  const [handling, setHandling] = useState<string | null>(null);
+  const KIND: Record<string, string> = { quiet: "Gone quiet", stuck: "Stuck on a book", behind: "Falling behind", "slow-page": "Struggling on a page" };
+  const handled = async (alertId: string) => {
+    setHandling(alertId);
+    try {
+      await api.handleAlert(id, alertId);
+      if (cls) setData({ ...cls, alerts: (cls.alerts ?? []).filter((a) => a.id !== alertId) });
+    } catch {
+      /* stays in the list; the next refresh tells the truth */
+    } finally {
+      setHandling(null);
+    }
+  };
 
   return (
     <>
@@ -28,6 +42,23 @@ export default function ClassScreen() {
               <Button title="Stickers" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/stickers/[id]", params: { id: cls.id } })} />
             </View>
           </View>
+        ) : null}
+        {cls && cls.alerts && cls.alerts.length > 0 ? (
+          <Card style={{ padding: 0 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: palette.ink950, padding: 14, paddingBottom: 2, fontFamily: "serif" }}>Needs a hand</Text>
+            <Muted style={{ paddingHorizontal: 14, paddingBottom: 8 }}>From reading patterns this week. Alerts clear on their own when the pattern changes.</Muted>
+            {cls.alerts.map((a) => (
+              <View key={a.id} style={{ padding: 12, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ fontWeight: "700", color: palette.ink950, flex: 1 }}>{a.studentName}</Text>
+                  <Badge tone="amber">{KIND[a.kind] ?? a.kind}</Badge>
+                </View>
+                <Text style={{ color: palette.ink900, fontSize: 13 }}>{a.detail}.</Text>
+                <Muted>Try: {a.action}.</Muted>
+                <Button title={handling === a.id ? "…" : "Handled"} variant="secondary" disabled={handling === a.id} style={{ alignSelf: "flex-start", minHeight: 34, paddingVertical: 6, marginTop: 4 }} onPress={() => handled(a.id)} />
+              </View>
+            ))}
+          </Card>
         ) : null}
         {cls && cls.subjects.length === 0 ? <Empty>No subjects have been added to this class yet.</Empty> : null}
         {cls?.subjects.map((s) => (

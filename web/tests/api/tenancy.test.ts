@@ -139,12 +139,34 @@ describe("tenant isolation", () => {
     expect(heard.status).toBe(200);
     expect(heard.headers.get("content-type")).toContain("audio/wav");
     expect((await api(`/api/files/${fileId}/narration?page=1`, { token: rStudent })).status).toBe(403);
-    expect((await api(`/api/files/${fileId}/narration?page=2`, { token: gStudent })).status).toBe(404);
+    expect((await api(`/api/files/${fileId}/narration?page=4321`, { token: gStudent })).status).toBe(404);
     // Re-recording replaces, removing clears.
     expect((await put(gTeacher, 1)).status).toBe(200);
     expect((await api(`/api/uploads/narration?fileId=${fileId}&page=1`, { method: "DELETE", token: gStudent })).status).toBe(403);
     expect((await api(`/api/uploads/narration?fileId=${fileId}&page=1`, { method: "DELETE", token: gTeacher })).status).toBe(200);
     expect((await api(`/api/files/${fileId}/narration?page=1`, { token: gStudent })).status).toBe(404);
+  });
+  it("page insights and alerts: the viewer's page time is recorded and summarised for the teacher; alerts are the teacher's only", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const r = await api(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: gStudent, body: JSON.stringify({ page: 2, pageCount: 4, day: today, dwell: [{ page: 1, ms: 12_000 }, { page: 2, ms: 700 }] }) });
+    expect(r.status).toBe(200);
+    type Ins = { pageCount: number; pages: { page: number; reached: number; avgMs: number | null; measured: number }[]; students: { id: string; totalMs: number }[] };
+    const ins = await api<Ins>(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: gTeacher });
+    expect(ins.status).toBe(200);
+    expect(ins.data!.pageCount).toBeGreaterThanOrEqual(4);
+    const p1 = ins.data!.pages.find((p) => p.page === 1)!;
+    expect(p1.measured).toBeGreaterThanOrEqual(1);
+    expect(p1.avgMs).toBeGreaterThanOrEqual(12_000);
+    expect(p1.reached).toBeGreaterThanOrEqual(1);
+    // Sub-second blips are ignored.
+    expect(ins.data!.pages.find((p) => p.page === 2)!.measured).toBe(0);
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: rTeacher })).status).toBe(404);
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: gStudent })).status).toBe(403);
+    const alerts = await api<{ alerts: unknown[] }>(`/api/mobile/classes/${greenwoodClassId}/alerts`, { token: gTeacher });
+    expect(alerts.status).toBe(200);
+    expect(Array.isArray(alerts.data!.alerts)).toBe(true);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/alerts`, { token: rTeacher })).status).toBe(404);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/alerts`, { method: "POST", token: gTeacher, body: JSON.stringify({ alertId: "00000000-0000-4000-8000-000000000000" }) })).status).toBe(404);
   });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };

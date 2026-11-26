@@ -2,10 +2,12 @@ import Link from "next/link";
 import { requireSchoolRole } from "@/lib/auth";
 import { teacherClasses } from "@/lib/data";
 import { Empty, PageHeader, spineColor } from "@/components/ui";
+import { syncSupportAlerts } from "@/lib/insights";
 
 export default async function TeacherHome() {
   const session = await requireSchoolRole("TEACHER");
   const classes = await teacherClasses(session.userId);
+  const alertCounts = new Map(await Promise.all(classes.map(async (c) => [c.id, new Set((await syncSupportAlerts(c.id)).map((a) => a.studentId)).size] as const)));
 
   return (
     <>
@@ -27,6 +29,7 @@ export default async function TeacherHome() {
                     <Stat label="Students" value={c.studentCount} />
                   </dl>
                   <div className="mt-4 text-sm text-ink-500">{c.lessonCount && c.studentCount ? `${c.learntPercent}% of lessons learnt across the class` : "No progress yet"}</div>
+                  {(alertCounts.get(c.id) ?? 0) > 0 && <div className="mt-2 inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">{alertCounts.get(c.id)} {alertCounts.get(c.id) === 1 ? "child needs" : "children need"} a hand</div>}
                 </div>
               </Link>
             </li>

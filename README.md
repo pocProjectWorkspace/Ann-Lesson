@@ -274,6 +274,32 @@ board notes) under an `Activity`; closing the board closes any open activity. Ov
 event stream a child's submission reaches staff and that child only, never classmates,
 and `GET /api/live/:classId` returns all submissions to staff and only their own to a student.
 
+## Page insights and early-support alerts
+
+**Page insights** (`/teacher/lessons/:id/insights`, "Page insights" on the lesson page,
+`GET /api/mobile/lessons/:id/insights`). The viewer measures how long each page is on
+screen (only while the tab is visible, clipped at 10 minutes a visit) and sends it with
+the next position report as `dwell`; it is kept per child and page in `PageDwell`.
+The page shows, for one book: how many children reached each page, the average time on
+it, where children stopped, the hardest page, the drop-off page, and for each child their
+furthest page, time in the book and the page that took them longest against the class.
+
+**Needs a hand** (card on the teacher's class page and in the app's class screen; badge
+on the teacher home; `GET/POST /api/mobile/classes/:id/alerts`). Four signals, all
+relative to the class so holidays and slow classes do not trigger them:
+
+- gone quiet: no reading day in 7 days while at least half the class has one (or never started);
+- stuck: a book opened, not finished, untouched for 4 days, while 60% of the class finished it;
+- falling behind: overall read % at least 30 points under the class median over 3+ books;
+- struggling on a page: 3x the class median time on one page (45 s or more, 3+ children measured).
+
+Each alert names the child, says why in one line, and suggests one thing to try (sit
+with them on page N, send the page to their desk, read it together, give a sticker).
+Alerts are evaluated when a teacher opens the class (at most every five minutes), new
+ones notify the class's teachers once, they clear on their own when the signal goes, and
+"Handled" closes one and keeps it quiet for two weeks. Thresholds live in
+`web/src/lib/insights-rules.ts`, which is pure and unit-tested.
+
 ## Read to me: teacher voice recordings
 
 A teacher records their own voice reading each page of a book, and children get a

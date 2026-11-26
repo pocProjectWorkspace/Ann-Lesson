@@ -99,13 +99,31 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
 
   // Debounced reporter: the latest page wins, and anything pending is flushed when the
   // tab is hidden or the component goes away (sendBeacon survives page unloads).
-  const pending = useRef<{ page: number; pageCount: number; day: string } | null>(null);
+  const pending = useRef<{ page: number; pageCount: number; day: string; dwell?: { page: number; ms: number }[] } | null>(null);
+  // Attention: which pages are on screen and since when; sent as "dwell" on the next report.
+  const shown = useRef<{ pages: number[]; since: number } | null>(null);
+  const lastShownPages = useRef<number[]>([]);
+  const lastReport = useRef<{ page: number; pageCount: number } | null>(null);
+  const dwellQueue = useRef<{ page: number; ms: number }[]>([]);
+  const closeShown = () => {
+    const prev = shown.current;
+    shown.current = null;
+    if (!prev) return;
+    const ms = Date.now() - prev.since;
+    if (ms >= 1000) for (const p of prev.pages) dwellQueue.current.push({ page: p, ms });
+  };
+  const noteShown = useCallback((pages: number[]) => {
+    closeShown();
+    lastShownPages.current = pages;
+    if (document.visibilityState === "visible") shown.current = { pages, since: Date.now() };
+  }, []);
   const [earned, setEarned] = useState<{ id: string; emoji: string; label: string }[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const report = useCallback((page: number, pageCount: number, immediate = false) => {
     const t = trackRef.current;
     if (!t) return;
-    pending.current = { page, pageCount, day: localDay() };
+    lastReport.current = { page, pageCount };
+    pending.current = { page, pageCount, day: localDay(), dwell: dwellQueue.current.splice(0, 20) };
     const send = async () => {
       const body = pending.current;
       pending.current = null;
@@ -131,13 +149,20 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
   useEffect(() => {
     const flush = () => {
       const t = trackRef.current;
-      const body = pending.current;
+      // Close the open spread's timer so time on the last page is not lost, and send
+      // whatever is pending plus that time in one beacon.
+      closeShown();
+      const body = pending.current ?? (lastReport.current && dwellQueue.current.length ? { ...lastReport.current, day: localDay() } : null);
       if (!t || !body) return;
+      body.dwell = [...(body.dwell ?? []), ...dwellQueue.current.splice(0, 20)];
       pending.current = null;
       if (timer.current) clearTimeout(timer.current);
       navigator.sendBeacon?.(positionUrl(t), new Blob([JSON.stringify(body)], { type: "application/json" }));
     };
-    const onHide = () => document.visibilityState === "hidden" && flush();
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+      else if (lastShownPages.current.length) shown.current = { pages: lastShownPages.current, since: Date.now() };
+    };
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", flush);
     return () => {
@@ -242,10 +267,16 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
       // The furthest page visible for a given index: in a two-page spread the right-hand
       // page (odd index + 1); on a phone, or on the cover and back, the index itself.
       const reached = (idx: number) => Math.min(total, (flip && flip.getOrientation() === "portrait" ? idx : idx % 2 === 1 ? idx + 1 : idx) + 1);
+      const visible = (idx: number) => {
+        const portrait = flip?.getOrientation() === "portrait";
+        if (portrait || idx === 0 || idx >= total - 1) return [idx + 1];
+        return [idx + 1, Math.min(total, idx + 2)];
+      };
       flip.on("flip", (e) => {
         const idx = Number(e.data);
         currentRef.current = idx;
         setCurrent(idx);
+        noteShown(visible(idx));
         wake?.(); // re-prioritise the render queue around the new page
         report(reached(idx), total);
         onPageRef.current?.(idx + 1, total);
@@ -259,6 +290,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
         currentRef.current = start;
         setCurrent(start);
       }
+      noteShown(visible(start));
       report(reached(start), total);
       flip.on("changeOrientation", (e: { data: string }) => setIsPortrait(e.data === "portrait"));
       setIsPortrait(flip.getOrientation() === "portrait");
@@ -332,7 +364,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
       flipRef.current = null;
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [doc, status.kind, ratio, watermark, report]);
+  }, [doc, status.kind, ratio, watermark, report, noteShown]);
 
   // Follow the teacher: when the board moves to a page, turn to it (no animation jump
   // across many pages; page-flip animates a single turn and jumps otherwise).
