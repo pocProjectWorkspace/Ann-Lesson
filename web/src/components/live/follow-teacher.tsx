@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveRoom } from "./use-live-room";
-import { Flipbook, type Narration, type ReadingTrack } from "@/components/flipbook";
+import { Flipbook, type Colouring, type Narration, type ReadingTrack } from "@/components/flipbook";
 import { ActivityPad } from "./activity-pad";
 
 /**
@@ -14,7 +14,7 @@ import { ActivityPad } from "./activity-pad";
 /** Where to send the student when the board moves to another book: a template with {lessonId} and {fileId}. */
 const fill = (template: string, lessonId: string, fileId: string) => template.replace("{lessonId}", lessonId).replace("{fileId}", fileId);
 
-export function FollowingBook({ classId, lessonId, fileId, src, title, watermark, track, token, hrefTemplate, narration }: { classId: string; lessonId: string; fileId: string; src: string; title: string; watermark?: string; track?: ReadingTrack; token?: string; hrefTemplate: string; narration?: Narration }) {
+export function FollowingBook({ classId, lessonId, fileId, src, title, watermark, track, token, hrefTemplate, narration, colouring }: { classId: string; lessonId: string; fileId: string; src: string; title: string; watermark?: string; track?: ReadingTrack; token?: string; hrefTemplate: string; narration?: Narration; colouring?: Colouring }) {
   const router = useRouter();
   const { state, send, submissions } = useLiveRoom(classId, { token });
   const activity = state?.activity ?? null;
@@ -30,7 +30,7 @@ export function FollowingBook({ classId, lessonId, fileId, src, title, watermark
   const activitySrc = activity ? src.replace(fileId, activity.fileId) : src;
   return (
     <div className="space-y-2">
-      {activity && <ActivityPad key={activity.id} activity={activity} src={activitySrc} initialStrokes={mine?.strokes ?? []} send={send} />}
+      {activity && <ActivityPad key={activity.id} page={activity.page} prompt={activity.prompt} src={activitySrc} initialStrokes={mine?.strokes ?? []} onSave={(strokes, done) => send({ type: "activity.submit", activityId: activity.id, strokes, done })} />}
       {state && (
         <p className={`rounded-lg px-3.5 py-2 text-sm font-medium ${following ? "bg-leaf-100 text-leaf-600" : "bg-ink-100/70 text-ink-700"}`} role="status">
           {following ? `Following your teacher: page ${state.page}` : state.follow ? "Your teacher is reading another book; taking you there…" : "Your teacher's board is on. You are reading on your own."}
@@ -42,6 +42,7 @@ export function FollowingBook({ classId, lessonId, fileId, src, title, watermark
         watermark={watermark}
         track={track}
         narration={narration}
+        colouring={colouring}
         followPage={following ? state!.page : null}
         onPage={(page) => {
           const now = Date.now();

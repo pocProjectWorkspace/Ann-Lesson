@@ -193,6 +193,31 @@ describe("tenant isolation", () => {
     const notes = await api<{ items: { title: string; body: string | null }[] }>("/api/mobile/notifications", { token: parent });
     expect(notes.data!.items.some((n) => n.title.includes("Aarav got a sticker: Star of the day"))).toBe(true);
   });
+  it("colouring: a child colours a page with fills and crayons, it is saved per page, the teacher sees the gallery", async () => {
+    const fileId = greenwoodLesson.files[0].id;
+    const strokes = [
+      { tool: "fill", color: "#facc15", width: 0.001, points: [[0.5, 0.6]] },
+      { tool: "crayon", color: "#ef4444", width: 0.022, points: [[0.2, 0.2], [0.3, 0.25], [0.4, 0.2]] },
+    ];
+    const saved = await api<{ ok: boolean; page: number }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring`, { method: "POST", token: gStudent, body: JSON.stringify({ fileId, page: 3, strokes }) });
+    expect(saved.status).toBe(200);
+    expect(saved.data!.page).toBe(3);
+    const mine = await api<{ pages: { page: number; strokes: unknown[] }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: gStudent });
+    expect(mine.status).toBe(200);
+    expect(mine.data!.pages.find((p) => p.page === 3)!.strokes).toHaveLength(2);
+    const gallery = await api<{ gallery: { studentName: string; page: number }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: gTeacher });
+    expect(gallery.status).toBe(200);
+    expect(gallery.data!.gallery.some((g) => g.studentName === "Aarav Mehta" && g.page === 3)).toBe(true);
+    // Unknown tools and other schools are refused; a classmate sees only their own pages.
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/colouring`, { method: "POST", token: gStudent, body: JSON.stringify({ fileId, page: 3, strokes: [{ tool: "spray", color: "#000000", width: 0.01, points: [[0.1, 0.1]] }] }) })).status).toBe(400);
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: rStudent })).status).toBe(404);
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: rTeacher })).status).toBe(404);
+    const other = (await login(users.greenwoodStudent2.school, users.greenwoodStudent2.username, users.greenwoodStudent2.password)).token;
+    expect((await api<{ pages: { page: number }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: other })).data!.pages.some((p) => p.page === 3)).toBe(false);
+    // Clearing the page removes it.
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/colouring`, { method: "POST", token: gStudent, body: JSON.stringify({ fileId, page: 3, strokes: [] }) })).status).toBe(200);
+    expect((await api<{ pages: { page: number }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: gStudent })).data!.pages.some((p) => p.page === 3)).toBe(false);
+  });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
     const fileId = greenwoodLesson.files[0].id;

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionFromRequest, type Session } from "@/lib/auth";
 import { broadcast, closeRoom, people, setState, stateOf, submissionsOf, touch } from "@/lib/live";
+import { strokeSchema } from "@/lib/strokes";
 import { audit } from "@/lib/audit";
 
 /** Who may be in this class's room: its teachers, the school's admins, its students. */
@@ -35,12 +36,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ classId: st
   return NextResponse.json({ state, people: people(classId), submissions }, { headers: { "Cache-Control": "no-store" } });
 }
 
-const strokeSchema = z.object({
-  tool: z.enum(["pen", "highlighter"]),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  width: z.number().min(0.001).max(0.2),
-  points: z.array(z.tuple([z.number().min(-0.1).max(1.1), z.number().min(-0.1).max(1.1)])).min(1).max(4000),
-});
 const command = z.discriminatedUnion("type", [
   z.object({ type: z.literal("activity.open"), page: z.number().int().min(1).max(5000).optional(), prompt: z.string().trim().max(300).optional() }),
   z.object({ type: z.literal("activity.close") }),

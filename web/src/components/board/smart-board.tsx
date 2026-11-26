@@ -6,34 +6,12 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { saveBoardNotes, type Stroke } from "@/app/board/actions";
 import { useLiveRoom } from "@/components/live/use-live-room";
 import { DeskWall } from "@/components/live/desk-wall";
+import { CRAYON_COLORS, CRAYON_WIDTH, HIGHLIGHT_WIDTH, PEN_WIDTH, fillContains, paintStrokes } from "@/components/live/ink";
 
-type Tool = "pen" | "highlighter" | "eraser" | "spotlight" | "cover" | "none";
+type Tool = "pen" | "highlighter" | "crayon" | "fill" | "eraser" | "spotlight" | "cover" | "none";
 type Point = [number, number];
 
-const COLORS = ["#e11d48", "#2563eb", "#16a34a", "#111827"];
-const PEN_WIDTH = 0.006; // of page width
-const HIGHLIGHT_WIDTH = 0.03;
-
-/** Draw strokes (page-relative) onto a canvas of the given pixel size. */
-function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], w: number, h: number, live?: Stroke | null) {
-  ctx.clearRect(0, 0, w, h);
-  for (const s of live ? [...strokes, live] : strokes) {
-    if (s.points.length === 0) continue;
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = s.color;
-    ctx.globalAlpha = s.tool === "highlighter" ? 0.35 : 1;
-    ctx.lineWidth = Math.max(1, s.width * w);
-    ctx.beginPath();
-    const [x0, y0] = s.points[0];
-    ctx.moveTo(x0 * w, y0 * h);
-    if (s.points.length === 1) ctx.lineTo(x0 * w + 0.01, y0 * h);
-    for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i][0] * w, s.points[i][1] * h);
-    ctx.stroke();
-    ctx.restore();
-  }
-}
+const COLORS = CRAYON_COLORS;
 
 function formatTime(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -191,7 +169,8 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
     c.style.height = `${size.h}px`;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    paint(ctx, strokes, c.width, c.height, live);
+    ctx.clearRect(0, 0, c.width, c.height);
+    paintStrokes(ctx, strokes, c.width, c.height, live, { page: pageCanvas.current });
   }, [strokes, live, size]);
 
   /* ---------- save, debounced per page ---------- */
@@ -230,8 +209,13 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
     if (tool === "spotlight") return setSpot((s) => ({ ...s, x: pt[0], y: pt[1] }));
     if (tool === "cover") return setCover((c) => ({ ...c, y: pt[1] }));
     if (tool === "eraser") return eraseAt(pt);
+    if (tool === "fill") {
+      const c = inkCanvas.current;
+      const rest = strokes.filter((s) => !(s.tool === "fill" && c && fillContains(pageCanvas.current, c.width, c.height, s, pt[0], pt[1])));
+      return setPageStrokes(page, [...rest, { tool: "fill", color, width: 0.001, points: [pt] }]);
+    }
     drawing.current = true;
-    setLive({ tool, color: tool === "highlighter" ? "#facc15" : color, width: tool === "highlighter" ? HIGHLIGHT_WIDTH : PEN_WIDTH, points: [pt] });
+    setLive({ tool, color: tool === "highlighter" ? "#facc15" : color, width: tool === "highlighter" ? HIGHLIGHT_WIDTH : tool === "crayon" ? CRAYON_WIDTH : PEN_WIDTH, points: [pt] });
   };
   const onMove = (e: React.PointerEvent) => {
     if (tool === "none") return;
@@ -251,7 +235,8 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
     });
   };
   const eraseAt = (pt: Point) => {
-    const keep = strokes.filter((s) => !s.points.some(([x, y]) => Math.hypot(x - pt[0], (y - pt[1]) * (size.h / Math.max(1, size.w))) < 0.02));
+    const c = inkCanvas.current;
+    const keep = strokes.filter((s) => (s.tool === "fill" ? !(c && fillContains(pageCanvas.current, c.width, c.height, s, pt[0], pt[1])) : !s.points.some(([x, y]) => Math.hypot(x - pt[0], (y - pt[1]) * (size.h / Math.max(1, size.w))) < 0.02)));
     if (keep.length !== strokes.length) setPageStrokes(page, keep);
   };
 
@@ -345,10 +330,12 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
         <aside className="flex w-20 flex-col items-center gap-2 overflow-y-auto px-2 py-3" aria-label="Board tools">
           {toolBtn("pen", "Pen", "✎")}
           {toolBtn("highlighter", "Highlight", "▮")}
+          {toolBtn("crayon", "Crayon", "🖍")}
+          {toolBtn("fill", "Fill", "🪣")}
           {toolBtn("eraser", "Eraser", "⌫")}
-          <div className="my-1 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Pen colour">
+          <div className="my-1 grid grid-cols-3 gap-1" role="radiogroup" aria-label="Colour">
             {COLORS.map((c) => (
-              <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={`Colour ${c}`} onClick={() => { setColor(c); if (tool !== "pen") setTool("pen"); }} className={`h-6 w-6 rounded-full border-2 ${color === c ? "border-white" : "border-transparent"}`} style={{ background: c }} />
+              <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={`Colour ${c}`} onClick={() => { setColor(c); if (tool !== "pen" && tool !== "crayon" && tool !== "fill") setTool("pen"); }} className={`h-5 w-5 rounded-full border-2 ${color === c ? "border-white" : "border-transparent"}`} style={{ background: c }} />
             ))}
           </div>
           {toolBtn("spotlight", "Spotlight", "◎")}
@@ -390,7 +377,7 @@ export function SmartBoard({ lesson, files, currentFileId, students, saved, back
             <canvas
               ref={inkCanvas}
               className="absolute inset-0 touch-none"
-              style={{ cursor: tool === "none" ? "default" : tool === "eraser" ? "cell" : "crosshair" }}
+              style={{ cursor: tool === "none" ? "default" : tool === "eraser" ? "cell" : tool === "fill" ? "pointer" : "crosshair", mixBlendMode: "multiply" }}
               onPointerDown={onDown}
               onPointerMove={onMove}
               onPointerUp={onUp}

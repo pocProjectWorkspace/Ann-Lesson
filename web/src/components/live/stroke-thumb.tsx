@@ -18,7 +18,7 @@ export function StrokeThumb({ src, page, strokes, width, className }: { src: str
         c.style.height = `${(width * img.height) / img.width}px`;
         const ctx = c.getContext("2d")!;
         ctx.drawImage(img, 0, 0);
-        paintStrokes(ctx, strokes, c.width, c.height);
+        paintStrokes(ctx, strokes, c.width, c.height, null, { page: img, onPage: true });
       })
       .catch(() => {});
     return () => {

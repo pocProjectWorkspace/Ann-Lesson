@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PageFlip } from "page-flip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
+import { ActivityPad } from "./live/activity-pad";
+import type { Stroke } from "@/lib/strokes";
 
 /** Faint diagonal name across the page so a screenshot identifies its source. */
 function stampWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, text: string) {
@@ -28,6 +30,8 @@ type Status = { kind: "opening" } | { kind: "book"; total: number; rendered: num
 export type ReadingTrack = { lessonId: string; startPage?: number; token?: string };
 /** Where the teacher's voice clips are served from, and which pages have one. */
 export type Narration = { src: string; pages: number[] };
+/** Lets a student colour pages of this book; strokes are saved per page through the colouring endpoint. */
+export type Colouring = { lessonId: string; fileId: string; token?: string };
 
 /** The device's local calendar date, which is what a reading streak counts. */
 function localDay() {
@@ -80,7 +84,7 @@ function targetWidth() {
  *    reached as they read, so the dashboard shows a percentage and "Continue reading"
  *    resumes in the right place.
  */
-export function Flipbook({ src, title, watermark, track, onProgress, followPage, onPage, narration }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void; followPage?: number | null; onPage?: (page: number, pageCount: number) => void; narration?: Narration }) {
+export function Flipbook({ src, title, watermark, track, onProgress, followPage, onPage, narration, colouring }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void; followPage?: number | null; onPage?: (page: number, pageCount: number) => void; narration?: Narration; colouring?: Colouring }) {
   const bookRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlip | null>(null);
   const currentRef = useRef(0);
@@ -391,6 +395,45 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
   const prev = useCallback(() => flipRef.current?.flipPrev(), []);
   const next = useCallback(() => flipRef.current?.flipNext(), []);
 
+  // Colouring: which pages this child has coloured, and the pad when one is open.
+  const [coloured, setColoured] = useState<Set<number>>(new Set());
+  const [colourPage, setColourPage] = useState<{ page: number; strokes: Stroke[] } | null>(null);
+  const colouringUrl = useCallback((extra = "") => (colouring ? `/api/mobile/lessons/${colouring.lessonId}/colouring?fileId=${colouring.fileId}${extra}${colouring.token ? `&t=${encodeURIComponent(colouring.token)}` : ""}` : ""), [colouring]);
+  useEffect(() => {
+    if (!colouring) return;
+    let cancelled = false;
+    fetch(colouringUrl(), { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { pages: [] }))
+      .then((j: { pages?: { page: number }[] }) => !cancelled && setColoured(new Set((j.pages ?? []).map((p) => p.page))))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [colouring, colouringUrl]);
+  const openColouring = async (page: number) => {
+    let strokes: Stroke[] = [];
+    try {
+      const r = await fetch(colouringUrl(`&page=${page}`), { cache: "no-store" });
+      if (r.ok) strokes = ((await r.json()) as { pages?: { strokes: Stroke[] }[] }).pages?.[0]?.strokes ?? [];
+    } catch {
+      /* start blank */
+    }
+    setColourPage({ page, strokes });
+  };
+  const saveColouring = useCallback(
+    async (page: number, strokes: Stroke[]) => {
+      const r = await fetch(colouringUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileId: colouring!.fileId, page, strokes }) });
+      if (!r.ok) throw new Error("save failed");
+      setColoured((s) => {
+        const n = new Set(s);
+        if (strokes.length) n.add(page);
+        else n.delete(page);
+        return n;
+      });
+    },
+    [colouring, colouringUrl],
+  );
+
   // Read to me: play the teacher's clip for each visible page, then turn the page and
   // carry on until the last recorded page. Turning a page by hand while reading simply
   // continues from there.
@@ -467,6 +510,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
 
   return (
     <div className="relative flex flex-col items-center gap-3">
+      {colourPage && colouring && <ActivityPad key={colourPage.page} mode="colouring" page={colourPage.page} src={src} initialStrokes={colourPage.strokes} onSave={(strokes) => saveColouring(colourPage.page, strokes)} onClose={() => setColourPage(null)} />}
       {earned.length > 0 && (
         <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center" role="status" aria-live="polite">
           <div className="flex items-center gap-3 rounded-full bg-amber-300 px-5 py-2.5 text-ink-950 shadow-lift">
@@ -500,6 +544,12 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
           <button onClick={next} disabled={current >= total - 1} aria-label="Next page" className="rounded-full border border-ink-200 bg-white px-4 py-1.5 font-semibold hover:bg-ink-100 disabled:opacity-40" type="button">
             Next →
           </button>
+          {colouring &&
+            (isPortrait || current === 0 || current >= total - 1 ? [current + 1] : [current + 1, Math.min(total, current + 2)]).map((p) => (
+              <button key={p} type="button" onClick={() => openColouring(p)} className={`ml-2 rounded-full px-4 py-1.5 font-semibold ${coloured.has(p) ? "bg-amber-100 text-amber-900" : "border border-ink-200 bg-white hover:bg-ink-100"}`} aria-label={`Colour page ${p}${coloured.has(p) ? ", already started" : ""}`}>
+                🖍️ Colour{total > 1 && !isPortrait && current !== 0 && current < total - 1 ? ` p.${p}` : ""}
+              </button>
+            ))}
           {narration && narration.pages.length > 0 && (
             <button
               type="button"

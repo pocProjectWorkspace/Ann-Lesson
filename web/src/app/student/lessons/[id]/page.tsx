@@ -42,7 +42,7 @@ export default async function StudentLesson({ params, searchParams }: { params: 
             {narration && <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Your teacher can read this to you</span>}
           </header>
           <div className="p-2 sm:p-3">
-            <FollowingBook classId={lesson.class.id} lessonId={lesson.id} fileId={current.id} src={`/api/files/${current.id}`} title={current.fileName} watermark={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} hrefTemplate="/student/lessons/{lessonId}?file={fileId}" narration={narration} />
+            <FollowingBook classId={lesson.class.id} lessonId={lesson.id} fileId={current.id} src={`/api/files/${current.id}`} title={current.fileName} watermark={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} hrefTemplate="/student/lessons/{lessonId}?file={fileId}" narration={narration} colouring={{ lessonId: lesson.id, fileId: current.id }} />
           </div>
         </section>
       ) : (

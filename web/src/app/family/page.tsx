@@ -3,6 +3,7 @@ import { requireSchoolRole } from "@/lib/auth";
 import { familyOverview } from "@/lib/family";
 import { Empty } from "@/components/ui";
 import { now } from "@/lib/time";
+import { StrokeThumb } from "@/components/live/stroke-thumb";
 
 function greeting(d: Date) {
   const h = d.getHours();
@@ -73,6 +74,19 @@ export default async function FamilyHome() {
                 </div>
 
                 <div className="space-y-4">
+                  {c.artwork.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-ink-900">{c.firstName}&apos;s colouring</h3>
+                      <ul className="mt-2 grid grid-cols-3 gap-2">
+                        {c.artwork.map((a) => (
+                          <li key={`${a.fileId}:${a.page}`} className="overflow-hidden rounded-lg border border-ink-200/80 bg-white shadow-card">
+                            <StrokeThumb src={`/api/files/${a.fileId}`} page={a.page} strokes={a.strokes} width={160} className="w-full" />
+                            <div className="truncate px-2 py-1 text-xs text-ink-600">{a.title}, p.{a.page}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-sm font-semibold text-ink-900">Stickers {c.stickerCount ? <span className="font-normal text-ink-500">· {c.stickerCount}</span> : null}</h3>
                     {c.stickers.length === 0 ? (

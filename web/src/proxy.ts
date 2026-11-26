@@ -92,7 +92,7 @@ export async function proxy(req: NextRequest) {
   const bearer = pathname.startsWith("/api/") && auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : undefined;
   // The web-view hand-off token is accepted on the file route and on the reading-position
   // endpoint, which the embedded viewer calls from the mobile app without cookies.
-  const webviewPath = pathname.startsWith("/api/files/") || pathname.startsWith("/api/live/") || /^\/api\/mobile\/lessons\/[^/]+\/position$/.test(pathname);
+  const webviewPath = pathname.startsWith("/api/files/") || pathname.startsWith("/api/live/") || /^\/api\/mobile\/lessons\/[^/]+\/(position|colouring)$/.test(pathname);
   const queryToken = webviewPath ? req.nextUrl.searchParams.get("t") ?? undefined : undefined;
   const token = bearer ?? queryToken ?? req.cookies.get("lp_session")?.value;
   let role: string | null = null;

@@ -33,7 +33,7 @@ export default async function EmbeddedViewer({ params, searchParams }: { params:
   return (
     <main className="min-h-screen bg-slate-900 p-2">
       {session.role === "STUDENT" ? (
-        <FollowingBook classId={file.lesson.subject.classId} lessonId={file.lessonId} fileId={file.id} src={src} title={file.fileName} watermark={session.name} track={track} token={t} hrefTemplate={embedHref} narration={narration} />
+        <FollowingBook classId={file.lesson.subject.classId} lessonId={file.lessonId} fileId={file.id} src={src} title={file.fileName} watermark={session.name} track={track} token={t} hrefTemplate={embedHref} narration={narration} colouring={{ lessonId: file.lessonId, fileId: file.id, token: t }} />
       ) : (
         <Flipbook src={src} title={file.fileName} watermark={session.role === "TEACHER" ? session.name : undefined} track={track} narration={narration} />
       )}

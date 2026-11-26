@@ -91,6 +91,7 @@ model User {
   pageDwell           PageDwell[]
   supportAlerts       SupportAlert[]      @relation("AlertStudent")
   alertsHandled       SupportAlert[]      @relation("AlertHandler")
+  colourings          PageColouring[]
   children            GuardianLink[]      @relation("ParentOf")
   guardians           GuardianLink[]      @relation("ChildOf")
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
@@ -174,6 +175,7 @@ model Lesson {
   progress LessonProgress[]
   pageDwell     PageDwell[]
   supportAlerts SupportAlert[]
+  colourings    PageColouring[]
 
   @@index([subjectId])
 }
@@ -192,6 +194,7 @@ model LessonFile {
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   boardNotes BoardNote[]
   narrations PageAudio[]
+  colourings PageColouring[]
 
   @@index([lessonId])
 }
@@ -501,4 +504,23 @@ model GuardianLink {
 
   @@unique([parentId, studentId])
   @@index([studentId])
+}
+
+// A child's colouring of one page of a book: crayon strokes and fills, page-relative.
+model PageColouring {
+  id        String   @id @default(uuid())
+  studentId String
+  lessonId  String
+  fileId    String
+  page      Int
+  strokes   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  file    LessonFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, fileId, page])
+  @@index([lessonId, updatedAt])
 }

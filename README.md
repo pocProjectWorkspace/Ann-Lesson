@@ -256,6 +256,28 @@ with a polling fallback (`GET /api/live/:classId`); commands are
 `POST /api/live/:classId` (open, page, follow, pick, close for staff; here, leave for
 everyone). Room state is the `LiveSession` row; fan-out is in memory, per app instance.
 
+## Colouring
+
+Many kindergarten books are colouring pages, so children can colour any page of a book.
+In the viewer a student has a "Colour" button for the page(s) on screen; it opens the pad
+with a box of twelve crayons, a **fill bucket** (tap inside a shape and the area bounded
+by the printed outlines floods with colour, like a colouring app), a crayon that keeps
+the outlines visible, a pen, an eraser (tap a filled area to remove that fill) and
+clear. Work autosaves every two seconds and is kept per child, book and page
+(`PageColouring`), so the page stays coloured next time the book is opened, including in
+the app's web view (`GET/POST /api/mobile/lessons/:id/colouring`, with the `?t=` token).
+
+The same crayons and fill are on the smart board (teacher demonstrates), in
+board-to-desk activities (children colour the page the teacher sent, the wall shows the
+result) and in the thumbnails everywhere. Teachers have a per-lesson gallery
+(`/teacher/lessons/:id/gallery`, "Gallery" on the lesson page) of every coloured page by
+child; parents see their child's three latest coloured pages on the family page.
+
+A fill is stored as a seed point and colour, and recomputed from the page pixels when
+painted, so it is tiny to store and send. Fills never cross dark outlines, and are
+painted with multiply blending so the print shows through. See
+`web/src/components/live/ink.ts`.
+
 ## Board to desk: activities
 
 The teacher sends the page on the board to every student device as an activity, with an

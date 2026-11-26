@@ -53,6 +53,7 @@ async function childView(studentId: string) {
       class: { select: { id: true, name: true, section: true, teachers: { select: { teacher: { select: { name: true } } } }, subjects: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { name: true, lessons: { where: { publishedAt: { not: null }, files: { some: {} } }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], select: { id: true, title: true, files: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, narrations: { select: { page: true } } } } } } } } } },
       progress: { select: { lessonId: true, lastPage: true, maxPage: true, pageCount: true, finishedAt: true, learntAt: true, confirmedAt: true, lastViewedAt: true } },
       readingDays: { where: { day: { gt: addDays(dayString(new Date()), -7) } }, select: { day: true, pages: true } },
+      colourings: { orderBy: { updatedAt: "desc" }, take: 3, select: { fileId: true, page: true, strokes: true, updatedAt: true, lesson: { select: { title: true } } } },
     },
   });
   if (!child) return null;
@@ -84,6 +85,7 @@ async function childView(studentId: string) {
     tonight: tonight
       ? { lessonId: tonight.id, title: tonight.title, subjectName: tonight.subjectName, fileId: tonight.files[0]?.id ?? null, lastPage: tp?.lastPage ?? 0, pageCount: tp?.pageCount ?? null, percent: pct, started: !!tp, again, readToMe: (tonight.files[0]?.narrations.length ?? 0) > 0 }
       : null,
+    artwork: child.colourings.map((a) => ({ fileId: a.fileId, page: a.page, strokes: a.strokes as import("./strokes").Stroke[], title: a.lesson.title, updatedAt: a.updatedAt.toISOString() })),
     stickers: shelf.stickers.slice(0, 8),
     stickerCount: shelf.count,
     grades: grades ? { overall: grades.overall, rank: grades.showRank ? grades.rank : null, classSize: grades.classSize, subjects: grades.subjects } : null,

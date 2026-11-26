@@ -3,14 +3,8 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireSchoolRole } from "@/lib/auth";
-
-const strokeSchema = z.object({
-  tool: z.enum(["pen", "highlighter"]),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  width: z.number().min(0.001).max(0.2),
-  points: z.array(z.tuple([z.number().min(-0.1).max(1.1), z.number().min(-0.1).max(1.1)])).min(1).max(4000),
-});
-export type Stroke = z.infer<typeof strokeSchema>;
+import { strokeSchema, type Stroke } from "@/lib/strokes";
+export type { Stroke };
 
 /** Can this staff member open this file on the board? Teachers of the class and school admins. */
 async function boardFile(session: { userId: string; role: string; schoolId: string }, fileId: string) {
