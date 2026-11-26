@@ -274,6 +274,27 @@ board notes) under an `Activity`; closing the board closes any open activity. Ov
 event stream a child's submission reaches staff and that child only, never classmates,
 and `GET /api/live/:classId` returns all submissions to staff and only their own to a student.
 
+## Read to me: teacher voice recordings
+
+A teacher records their own voice reading each page of a book, and children get a
+"Read to me" button in the viewer that plays the teacher's voice for the pages on
+screen, waits a moment, turns the page and carries on to the last recorded page.
+Turning a page by hand while it reads simply continues from there.
+
+- Recording: `/teacher/lessons/:id/narrate` ("Record read to me" on the lesson page).
+  One page at a time, record in the browser (microphone) or upload an audio file; the
+  clip is saved when recording stops, and can be played back, re-recorded or removed.
+  Clips are small (Opus at 48 kbps, roughly 360 KB a minute) and count towards the
+  school's storage plan.
+- Playback: the same viewer on the web, in the smart board's follow mode, and in the
+  app's web view, so no app update is needed. Clips are served by
+  `GET /api/files/:fileId/narration?page=N` with exactly the PDF's access rules
+  (and the web-view `?t=` token).
+- Storage: `PageAudio` rows (file, page, storage key, duration, who recorded it);
+  the bytes live beside the PDFs in R2 or the local upload directory.
+  `PUT/DELETE /api/uploads/narration?fileId=&page=` sits outside the auth proxy like the
+  PDF upload and does its own origin, session and role checks.
+
 ## Stickers and streaks
 
 Two kinds of reward live on the child's home screen, in the app and on the web.

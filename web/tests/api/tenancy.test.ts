@@ -123,6 +123,29 @@ describe("tenant isolation", () => {
     expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: rTeacher, body: JSON.stringify({ studentIds: [me.id], kind: "star" }) })).status).toBe(404);
     expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { token: rTeacher })).status).toBe(404);
   });
+  it("read to me: a teacher records a clip per page, the class hears it, nobody else does", async () => {
+    const fileId = greenwoodLesson.files[0].id;
+    // A tiny WAV header is enough for the upload path; the server stores bytes, it does not decode.
+    const wav = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x24, 0, 0, 0, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20, 16, 0, 0, 0, 1, 0, 1, 0, 0x40, 0x1f, 0, 0, 0x80, 0x3e, 0, 0, 2, 0, 16, 0, 0x64, 0x61, 0x74, 0x61, 0, 0, 0, 0]);
+    const put = (token: string, page = 1, type = "audio/wav") => api<{ ok: boolean; page: number }>(`/api/uploads/narration?fileId=${fileId}&page=${page}&duration=1500`, { method: "PUT", token, headers: { "Content-Type": type }, body: wav });
+    expect((await put(gStudent)).status).toBe(403);
+    expect((await put(rTeacher)).status).toBe(404);
+    expect((await put(gTeacher, 1, "text/plain")).status).toBe(415);
+    const saved = await put(gTeacher, 1);
+    expect(saved.status).toBe(200);
+    expect(saved.data!.page).toBe(1);
+    // The class hears it; another school does not; a page without a clip is a clean 404.
+    const heard = await api(`/api/files/${fileId}/narration?page=1`, { token: gStudent });
+    expect(heard.status).toBe(200);
+    expect(heard.headers.get("content-type")).toContain("audio/wav");
+    expect((await api(`/api/files/${fileId}/narration?page=1`, { token: rStudent })).status).toBe(403);
+    expect((await api(`/api/files/${fileId}/narration?page=2`, { token: gStudent })).status).toBe(404);
+    // Re-recording replaces, removing clears.
+    expect((await put(gTeacher, 1)).status).toBe(200);
+    expect((await api(`/api/uploads/narration?fileId=${fileId}&page=1`, { method: "DELETE", token: gStudent })).status).toBe(403);
+    expect((await api(`/api/uploads/narration?fileId=${fileId}&page=1`, { method: "DELETE", token: gTeacher })).status).toBe(200);
+    expect((await api(`/api/files/${fileId}/narration?page=1`, { token: gStudent })).status).toBe(404);
+  });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
     const fileId = greenwoodLesson.files[0].id;

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveRoom } from "./use-live-room";
-import { Flipbook, type ReadingTrack } from "@/components/flipbook";
+import { Flipbook, type Narration, type ReadingTrack } from "@/components/flipbook";
 import { ActivityPad } from "./activity-pad";
 
 /**
@@ -14,7 +14,7 @@ import { ActivityPad } from "./activity-pad";
 /** Where to send the student when the board moves to another book: a template with {lessonId} and {fileId}. */
 const fill = (template: string, lessonId: string, fileId: string) => template.replace("{lessonId}", lessonId).replace("{fileId}", fileId);
 
-export function FollowingBook({ classId, lessonId, fileId, src, title, watermark, track, token, hrefTemplate }: { classId: string; lessonId: string; fileId: string; src: string; title: string; watermark?: string; track?: ReadingTrack; token?: string; hrefTemplate: string }) {
+export function FollowingBook({ classId, lessonId, fileId, src, title, watermark, track, token, hrefTemplate, narration }: { classId: string; lessonId: string; fileId: string; src: string; title: string; watermark?: string; track?: ReadingTrack; token?: string; hrefTemplate: string; narration?: Narration }) {
   const router = useRouter();
   const { state, send, submissions } = useLiveRoom(classId, { token });
   const activity = state?.activity ?? null;
@@ -41,6 +41,7 @@ export function FollowingBook({ classId, lessonId, fileId, src, title, watermark
         title={title}
         watermark={watermark}
         track={track}
+        narration={narration}
         followPage={following ? state!.page : null}
         onPage={(page) => {
           const now = Date.now();

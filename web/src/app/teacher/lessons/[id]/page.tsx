@@ -6,6 +6,7 @@ import { InlineAction } from "@/components/forms";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { confirmAllLearnt, confirmLearnt } from "../../actions";
 import { formatDate } from "@/lib/utils";
+import { narrationFor } from "@/lib/narration";
 
 export default async function TeacherLesson({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ file?: string }> }) {
   const session = await requireSchoolRole("TEACHER");
@@ -15,6 +16,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
   if (!lesson) notFound();
 
   const current = lesson.files.find((f) => f.id === fileParam) ?? lesson.files[0];
+  const narration = current ? await narrationFor(current.id) : undefined;
   const n = lesson.students.length;
   const opened = lesson.students.filter((s) => s.state !== "none").length;
   const learnt = lesson.students.filter((s) => s.learntAt).length;
@@ -30,6 +32,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
         actions={
           <>
             {current && <LinkButton href={`/board/${lesson.id}?file=${current.id}`} variant="primary">Open on smart board</LinkButton>}
+            {current && <LinkButton href={`/teacher/lessons/${lesson.id}/narrate?file=${current.id}`}>{narration ? `Read to me (${narration.pages.length} page${narration.pages.length === 1 ? "" : "s"})` : "Record read to me"}</LinkButton>}
             <LinkButton href={`/api/exports/progress.csv?classId=${lesson.class.id}`}>Export class progress</LinkButton>
           </>
         }
@@ -45,7 +48,7 @@ export default async function TeacherLesson({ params, searchParams }: { params: 
               ))}
             </nav>
           )}
-          {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} /> : <Empty>No PDF has been uploaded for this lesson yet.</Empty>}
+          {current ? <PdfViewer fileId={current.id} title={current.fileName} restricted viewerName={session.name} narration={narration} /> : <Empty>No PDF has been uploaded for this lesson yet.</Empty>}
         </div>
         <Card title="Who has read it" description={n ? `${confirmed} confirmed, ${learnt} marked learnt, ${opened} opened, of ${n}` : undefined} actions={pending > 0 ? <InlineAction action={confirmAllLearnt} hidden={{ lessonId: lesson.id }} label={`Confirm ${pending}`} variant="primary" /> : undefined}>
           {n > 0 && <ProgressBar value={(confirmed / n) * 100} className="mb-4" label="Confirmed share of class" />}

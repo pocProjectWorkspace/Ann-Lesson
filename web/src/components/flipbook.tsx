@@ -26,6 +26,8 @@ type Status = { kind: "opening" } | { kind: "book"; total: number; rendered: num
  * is the web-view hand-off token for the mobile app, which has no session cookie.
  */
 export type ReadingTrack = { lessonId: string; startPage?: number; token?: string };
+/** Where the teacher's voice clips are served from, and which pages have one. */
+export type Narration = { src: string; pages: number[] };
 
 /** The device's local calendar date, which is what a reading streak counts. */
 function localDay() {
@@ -78,7 +80,7 @@ function targetWidth() {
  *    reached as they read, so the dashboard shows a percentage and "Continue reading"
  *    resumes in the right place.
  */
-export function Flipbook({ src, title, watermark, track, onProgress, followPage, onPage }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void; followPage?: number | null; onPage?: (page: number, pageCount: number) => void }) {
+export function Flipbook({ src, title, watermark, track, onProgress, followPage, onPage, narration }: { src: string; title: string; watermark?: string; track?: ReadingTrack; onProgress?: (p: { page: number; pageCount: number; percent: number; finished: boolean }) => void; followPage?: number | null; onPage?: (page: number, pageCount: number) => void; narration?: Narration }) {
   const bookRef = useRef<HTMLDivElement>(null);
   const flipRef = useRef<PageFlip | null>(null);
   const currentRef = useRef(0);
@@ -357,6 +359,59 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
   const prev = useCallback(() => flipRef.current?.flipPrev(), []);
   const next = useCallback(() => flipRef.current?.flipNext(), []);
 
+  // Read to me: play the teacher's clip for each visible page, then turn the page and
+  // carry on until the last recorded page. Turning a page by hand while reading simply
+  // continues from there.
+  const [reading, setReading] = useState(false);
+  const [speaking, setSpeaking] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const narrationRef = useRef(narration);
+  useEffect(() => {
+    narrationRef.current = narration;
+  }, [narration]);
+  useEffect(() => {
+    if (!reading || status.kind !== "book") return;
+    const n = narrationRef.current;
+    if (!n) return;
+    const total = status.total;
+    const idx = current;
+    const spread = isPortrait || idx === 0 || idx >= total - 1 ? [idx + 1] : [idx + 1, idx + 2];
+    const queue = spread.filter((p) => p <= total && n.pages.includes(p));
+    const audio = audioRef.current ?? (audioRef.current = new Audio());
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      setReading(false);
+      setSpeaking(null);
+    };
+    const advance = () => {
+      if (cancelled) return;
+      if (!n.pages.some((p) => p > spread[spread.length - 1])) return finish();
+      flipRef.current?.flipNext();
+    };
+    const playAt = (i: number) => {
+      if (cancelled) return;
+      if (i >= queue.length) {
+        timer = setTimeout(advance, queue.length ? 700 : 150);
+        return;
+      }
+      const p = queue[i];
+      setSpeaking(p);
+      audio.src = `${n.src}${n.src.includes("?") ? "&" : "?"}page=${p}`;
+      audio.onended = () => playAt(i + 1);
+      audio.onerror = () => playAt(i + 1);
+      audio.play().catch(finish);
+    };
+    timer = setTimeout(() => playAt(0), 0);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+    };
+  }, [reading, current, isPortrait, status]);
+
   // Keyboard: left/right arrows turn pages.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -413,6 +468,21 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
           <button onClick={next} disabled={current >= total - 1} aria-label="Next page" className="rounded-full border border-ink-200 bg-white px-4 py-1.5 font-semibold hover:bg-ink-100 disabled:opacity-40" type="button">
             Next →
           </button>
+          {narration && narration.pages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (reading) {
+                  setReading(false);
+                  setSpeaking(null);
+                } else setReading(true);
+              }}
+              aria-pressed={reading}
+              className={`ml-2 rounded-full px-4 py-1.5 font-semibold ${reading ? "bg-amber-300 text-ink-950" : "bg-ink-900 text-white hover:bg-ink-700"}`}
+            >
+              {reading ? (speaking ? `Reading page ${speaking}… · Stop` : "Turning the page… · Stop") : "🔊 Read to me"}
+            </button>
+          )}
         </div>
       )}
       {status.kind === "book" && (

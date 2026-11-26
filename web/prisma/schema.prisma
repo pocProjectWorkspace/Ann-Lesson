@@ -86,6 +86,7 @@ model User {
   readingDays         ReadingDay[]
   stickers            Sticker[]           @relation("StickerOwner")
   stickersGiven       Sticker[]           @relation("StickerGiver")
+  narrations          PageAudio[]         @relation("Narrator")
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
   gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
@@ -182,6 +183,7 @@ model LessonFile {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   boardNotes BoardNote[]
+  narrations PageAudio[]
 
   @@index([lessonId])
 }
@@ -412,5 +414,27 @@ model Sticker {
   givenBy User? @relation("StickerGiver", fields: [givenById], references: [id], onDelete: SetNull)
 
   @@index([studentId, createdAt])
+  @@index([schoolId])
+}
+
+// Read-to-me: a teacher's voice clip for one page of a book, stored next to the PDFs.
+model PageAudio {
+  id         String   @id @default(uuid())
+  schoolId   String
+  lessonId   String
+  fileId     String
+  page       Int
+  storageKey String   @unique
+  mimeType   String
+  sizeBytes  Int
+  durationMs Int?
+  teacherId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  file    LessonFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  teacher User?      @relation("Narrator", fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@unique([fileId, page])
   @@index([schoolId])
 }

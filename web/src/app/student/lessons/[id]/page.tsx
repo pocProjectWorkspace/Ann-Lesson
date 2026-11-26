@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSchoolRole } from "@/lib/auth";
 import { lessonForUser } from "@/lib/data";
+import { narrationFor } from "@/lib/narration";
 import { Empty, PageHeader } from "@/components/ui";
 import { FollowingBook } from "@/components/live/follow-teacher";
 import { LearntForm } from "./learnt-form";
@@ -13,6 +14,7 @@ export default async function StudentLesson({ params, searchParams }: { params: 
   const lesson = await lessonForUser({ id: session.userId, role: "STUDENT", schoolId: session.schoolId }, id);
   if (!lesson) notFound();
   const current = lesson.files.find((f) => f.id === fileParam) ?? lesson.files[0];
+  const narration = current ? await narrationFor(current.id) : undefined;
 
   return (
     <>
@@ -37,9 +39,10 @@ export default async function StudentLesson({ params, searchParams }: { params: 
         <section className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-card" onContextMenu={undefined}>
           <header className="flex items-center justify-between gap-2 border-b border-ink-100 px-4 py-2.5 text-sm">
             <span className="truncate font-semibold text-ink-800">{current.fileName}</span>
+            {narration && <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Your teacher can read this to you</span>}
           </header>
           <div className="p-2 sm:p-3">
-            <FollowingBook classId={lesson.class.id} lessonId={lesson.id} fileId={current.id} src={`/api/files/${current.id}`} title={current.fileName} watermark={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} hrefTemplate="/student/lessons/{lessonId}?file={fileId}" />
+            <FollowingBook classId={lesson.class.id} lessonId={lesson.id} fileId={current.id} src={`/api/files/${current.id}`} title={current.fileName} watermark={session.name} track={{ lessonId: lesson.id, startPage: lesson.progress.lastPage || 1 }} hrefTemplate="/student/lessons/{lessonId}?file={fileId}" narration={narration} />
           </div>
         </section>
       ) : (

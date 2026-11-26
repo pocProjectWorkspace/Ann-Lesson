@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getSession, readWebviewSession } from "@/lib/auth";
 import { Flipbook } from "@/components/flipbook";
 import { FollowingBook } from "@/components/live/follow-teacher";
+import { narrationFor } from "@/lib/narration";
 
 /**
  * Minimal full-screen book viewer for the mobile app's web view.
@@ -28,12 +29,13 @@ export default async function EmbeddedViewer({ params, searchParams }: { params:
   // Students resume where they left off and report their position as they read.
   const own = session.role === "STUDENT" ? await db.lessonProgress.findUnique({ where: { studentId_lessonId: { studentId: session.userId, lessonId: file.lessonId } }, select: { lastPage: true } }) : null;
   const track = session.role === "STUDENT" ? { lessonId: file.lessonId, startPage: own?.lastPage || 1, token: t } : undefined;
+  const narration = await narrationFor(file.id, t);
   return (
     <main className="min-h-screen bg-slate-900 p-2">
       {session.role === "STUDENT" ? (
-        <FollowingBook classId={file.lesson.subject.classId} lessonId={file.lessonId} fileId={file.id} src={src} title={file.fileName} watermark={session.name} track={track} token={t} hrefTemplate={embedHref} />
+        <FollowingBook classId={file.lesson.subject.classId} lessonId={file.lessonId} fileId={file.id} src={src} title={file.fileName} watermark={session.name} track={track} token={t} hrefTemplate={embedHref} narration={narration} />
       ) : (
-        <Flipbook src={src} title={file.fileName} watermark={session.role === "TEACHER" ? session.name : undefined} track={track} />
+        <Flipbook src={src} title={file.fileName} watermark={session.role === "TEACHER" ? session.name : undefined} track={track} narration={narration} />
       )}
     </main>
   );

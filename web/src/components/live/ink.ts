@@ -32,6 +32,17 @@ const imageCache = new Map<string, Promise<HTMLCanvasElement>>();
  * applied inside). Cached per file, page and width so a thumbnail wall renders the
  * page once and only paints strokes per student.
  */
+/** How many pages a PDF has, from its metadata only. */
+export async function pdfPageCount(src: string): Promise<number> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const task = pdfjs.getDocument({ url: src, withCredentials: false, rangeChunkSize: 1024 * 1024, disableAutoFetch: true });
+  const doc = await task.promise;
+  const n = doc.numPages;
+  await task.destroy();
+  return n;
+}
+
 export function renderPageImage(src: string, page: number, cssWidth: number): Promise<HTMLCanvasElement> {
   const key = `${src}|${page}|${cssWidth}`;
   let p = imageCache.get(key);
