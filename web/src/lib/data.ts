@@ -56,7 +56,7 @@ export async function studentHome(userId: string) {
               lessons: {
                 where: visibleToStudents,
                 orderBy: lessonOrder,
-                include: { _count: { select: { files: true } }, progress: { where: { studentId: userId } } },
+                include: { _count: { select: { files: true } }, files: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } }, progress: { where: { studentId: userId } } },
               },
             },
           },
@@ -68,7 +68,7 @@ export async function studentHome(userId: string) {
   const subjects = (cls?.subjects ?? []).map((s) => {
     const lessons = s.lessons.map((l) => {
       const p = l.progress[0];
-      return { id: l.id, title: l.title, description: l.description, fileCount: l._count.files, ...ownProgress(p), lastViewedAt: p?.lastViewedAt ?? null };
+      return { id: l.id, title: l.title, description: l.description, fileCount: l._count.files, fileId: l.files[0]?.id ?? null, ...ownProgress(p), lastViewedAt: p?.lastViewedAt ?? null };
     });
     return { id: s.id, name: s.name, lessonCount: lessons.length, learntCount: lessons.filter((l) => l.learnt).length, readPercent: avg(lessons.map((l) => l.percent)), lessons };
   });
@@ -92,12 +92,12 @@ export async function studentSubject(userId: string, subjectId: string) {
   if (!me?.classId) return null;
   const subject = await db.subject.findFirst({
     where: { id: subjectId, classId: me.classId },
-    include: { class: true, lessons: { where: visibleToStudents, orderBy: lessonOrder, include: { progress: { where: { studentId: userId } }, _count: { select: { files: true } } } } },
+    include: { class: true, lessons: { where: visibleToStudents, orderBy: lessonOrder, include: { progress: { where: { studentId: userId } }, _count: { select: { files: true } }, files: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } } } } },
   });
   if (!subject) return null;
   const lessons = subject.lessons.map((l) => {
     const p = l.progress[0];
-    return { id: l.id, title: l.title, description: l.description, fileCount: l._count.files, ...ownProgress(p) };
+    return { id: l.id, title: l.title, description: l.description, fileCount: l._count.files, fileId: l.files[0]?.id ?? null, ...ownProgress(p) };
   });
   return { id: subject.id, name: subject.name, class: { id: subject.class.id, name: className(subject.class) }, lessonCount: lessons.length, learntCount: lessons.filter((l) => l.learnt).length, readPercent: avg(lessons.map((l) => l.percent)), lessons };
 }

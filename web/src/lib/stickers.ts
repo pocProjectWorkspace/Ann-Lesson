@@ -4,7 +4,7 @@ import { audit } from "./audit";
 import { notifyUsers } from "./notify";
 import { notifyGuardians } from "./family";
 import type { Session } from "./auth";
-import { bestStreak, currentStreak, dayString, localDay } from "./streaks";
+import { addDays, bestStreak, currentStreak, dayString, localDay } from "./streaks";
 
 /**
  * Stickers and streaks.
@@ -50,7 +50,7 @@ export const stickerKind = (kind: string): StickerKind => ALL.get(kind) ?? { kin
 export const isTeacherSticker = (kind: string) => TEACHER_STICKERS.some((s) => s.kind === kind);
 
 export type StickerView = { id: string; kind: string; emoji: string; label: string; note: string | null; givenBy: string | null; createdAt: string };
-export type StreakView = { current: number; best: number; readToday: boolean; days: number };
+export type StreakView = { current: number; best: number; readToday: boolean; days: number; recent: string[] };
 
 /** Count a page turn towards today's reading and return the streak as it stands. */
 export async function recordReadingDay(studentId: string, clientDay: string | undefined, pageTurned: boolean) {
@@ -62,7 +62,7 @@ export async function recordReadingDay(studentId: string, clientDay: string | un
 export async function streakOf(studentId: string, today = dayString(new Date())): Promise<StreakView> {
   const rows = await db.readingDay.findMany({ where: { studentId }, select: { day: true }, orderBy: { day: "desc" }, take: 1000 });
   const days = rows.map((r) => r.day);
-  return { current: currentStreak(days, today), best: bestStreak(days), readToday: days.includes(today), days: days.length };
+  return { current: currentStreak(days, today), best: bestStreak(days), readToday: days.includes(today), days: days.length, recent: days.filter((d) => d > addDays(today, -7)) };
 }
 
 /** Award every badge the student has now earned and not yet got. Returns the new ones. */
@@ -144,7 +144,7 @@ export async function classStickers(classId: string) {
   const today = dayString(new Date());
   return students.map((s) => {
     const days = s.readingDays.map((d) => d.day);
-    return { id: s.id, name: s.name, username: s.username, streak: { current: currentStreak(days, today), best: bestStreak(days), readToday: days.includes(today), days: days.length }, stickers: s.stickers.map(toView), count: s.stickers.length };
+    return { id: s.id, name: s.name, username: s.username, streak: { current: currentStreak(days, today), best: bestStreak(days), readToday: days.includes(today), days: days.length, recent: days.filter((d) => d > addDays(today, -7)) }, stickers: s.stickers.map(toView), count: s.stickers.length };
   });
 }
 

@@ -160,31 +160,45 @@ export function paintStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], w
 
 const imageCache = new Map<string, Promise<HTMLCanvasElement>>();
 
-/** How many pages a PDF has, from its metadata only. */
-export async function pdfPageCount(src: string): Promise<number> {
-  const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-  const task = pdfjs.getDocument({ url: src, withCredentials: false, rangeChunkSize: 1024 * 1024, disableAutoFetch: true });
-  const doc = await task.promise;
-  const n = doc.numPages;
-  await task.destroy();
-  return n;
-}
-
 /**
- * Render one PDF page to an offscreen canvas at the given CSS width (device pixels
- * applied inside). Cached per file, page and width so a thumbnail wall renders the
- * page once and only paints strokes per student.
+ * Open PDF documents, one per file, kept for a minute after their last use so a shelf of
+ * covers or a wall of thumbnails opens each file once instead of once per page.
  */
-export function renderPageImage(src: string, page: number, cssWidth: number): Promise<HTMLCanvasElement> {
-  const key = `${src}|${page}|${cssWidth}`;
-  let p = imageCache.get(key);
+type Opened = { task: import("pdfjs-dist").PDFDocumentLoadingTask; doc: import("pdfjs-dist").PDFDocumentProxy; timer?: ReturnType<typeof setTimeout> };
+const docCache = new Map<string, Promise<Opened>>();
+const DOC_IDLE_MS = 60_000;
+async function openDoc(src: string): Promise<Opened> {
+  let p = docCache.get(src);
   if (!p) {
     p = (async () => {
       const pdfjs = await import("pdfjs-dist");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const task = pdfjs.getDocument({ url: src, withCredentials: false, rangeChunkSize: 1024 * 1024, disableAutoFetch: true });
-      const doc = await task.promise;
+      return { task, doc: await task.promise };
+    })();
+    docCache.set(src, p);
+    p.catch(() => docCache.delete(src));
+  }
+  const o = await p;
+  if (o.timer) clearTimeout(o.timer);
+  o.timer = setTimeout(() => {
+    docCache.delete(src);
+    o.task.destroy().catch(() => {});
+  }, DOC_IDLE_MS);
+  return o;
+}
+
+/** How many pages a PDF has, from its metadata only. */
+export async function pdfPageCount(src: string): Promise<number> {
+  return (await openDoc(src)).doc.numPages;
+}
+
+export function renderPageImage(src: string, page: number, cssWidth: number): Promise<HTMLCanvasElement> {
+  const key = `${src}|${page}|${cssWidth}`;
+  let p = imageCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const { doc } = await openDoc(src);
       const pdfPage = await doc.getPage(page);
       const base = pdfPage.getViewport({ scale: 1 });
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -195,7 +209,6 @@ export function renderPageImage(src: string, page: number, cssWidth: number): Pr
       const ctx = canvas.getContext("2d")!;
       await pdfPage.render({ canvas, canvasContext: ctx, viewport }).promise;
       pdfPage.cleanup();
-      await task.destroy();
       return canvas;
     })();
     imageCache.set(key, p);

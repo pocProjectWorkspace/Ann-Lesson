@@ -256,6 +256,22 @@ with a polling fallback (`GET /api/live/:classId`); commands are
 `POST /api/live/:classId` (open, page, follow, pick, close for staff; here, leave for
 everyone). Room state is the `LiveSession` row; fan-out is in memory, per app instance.
 
+## Design: two worlds
+
+The adult side (owner, school admin, teacher) keeps the calm sidebar layout. Students
+and parents get the **child world** (`data-world="child"` on the shell, tokens in
+`globals.css`): warm oat paper, plum ink, a lagoon accent and sunflower for rewards,
+Baloo 2 for headings with Nunito for text, 17px base size, no sidebar (a small top bar
+with the child's animal avatar, the bell and sign out), and bigger tap targets.
+
+The student home is a **bookshelf**: each book is its real cover (page 1 of its PDF,
+rendered small and cached), standing on a wooden plank; the book being read leans out
+with a ribbon, finished books wear a gold star, and tapping a book opens it. The week is
+a row of seven suns (lit on days with reading, today ringed), and earning a sticker is a
+full-screen moment (the sticker drops in with confetti) rather than a banner. pdf.js
+documents are kept open for a minute and reused, so a shelf of covers opens each file
+once. Components live in `web/src/components/child/`.
+
 ## Colouring
 
 Many kindergarten books are colouring pages, so children can colour any page of a book.

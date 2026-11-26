@@ -148,6 +148,9 @@ describe("tenant isolation", () => {
   });
   it("page insights and alerts: the viewer's page time is recorded and summarised for the teacher; alerts are the teacher's only", async () => {
     const today = new Date().toISOString().slice(0, 10);
+    type Ins0 = { pages: { page: number; measured: number }[] };
+    const before = (await api<Ins0>(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: gTeacher })).data!;
+    const measuredBefore = before.pages.find((p) => p.page === 2)?.measured ?? 0;
     const r = await api(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: gStudent, body: JSON.stringify({ page: 2, pageCount: 4, day: today, dwell: [{ page: 1, ms: 12_000 }, { page: 2, ms: 700 }] }) });
     expect(r.status).toBe(200);
     type Ins = { pageCount: number; pages: { page: number; reached: number; avgMs: number | null; measured: number }[]; students: { id: string; totalMs: number }[] };
@@ -158,8 +161,8 @@ describe("tenant isolation", () => {
     expect(p1.measured).toBeGreaterThanOrEqual(1);
     expect(p1.avgMs).toBeGreaterThanOrEqual(12_000);
     expect(p1.reached).toBeGreaterThanOrEqual(1);
-    // Sub-second blips are ignored.
-    expect(ins.data!.pages.find((p) => p.page === 2)!.measured).toBe(0);
+    // Sub-second blips are ignored: page 2 gained no measurement.
+    expect(ins.data!.pages.find((p) => p.page === 2)!.measured).toBe(measuredBefore);
     expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: rTeacher })).status).toBe(404);
     expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/insights`, { token: gStudent })).status).toBe(403);
     const alerts = await api<{ alerts: unknown[] }>(`/api/mobile/classes/${greenwoodClassId}/alerts`, { token: gTeacher });

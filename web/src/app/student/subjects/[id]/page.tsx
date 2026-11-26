@@ -2,37 +2,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSchoolRole } from "@/lib/auth";
 import { studentSubject } from "@/lib/data";
-import { Badge, Empty, Numeral, PageHeader, ProgressBar } from "@/components/ui";
+import { Bookshelf } from "@/components/child/bookshelf";
+import { Empty } from "@/components/ui";
 
+/** One subject's shelf, with bigger covers. */
 export default async function StudentSubject({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSchoolRole("STUDENT");
   const { id } = await params;
   const subject = await studentSubject(session.userId, id);
   if (!subject) notFound();
-  const { lessonCount: total, learntCount: done } = subject;
+  const { lessonCount: total } = subject;
+  const finished = subject.lessons.filter((l) => l.finished || l.learnt).length;
 
   return (
     <>
-      <PageHeader crumbs={[{ href: "/student", label: "My subjects" }, { label: subject.name }]} title={subject.name} subtitle={total === 0 ? "No lessons yet" : `${done} of ${total} lesson${total === 1 ? "" : "s"} learnt, ${subject.readPercent}% read`} />
-      {total > 0 && <ProgressBar value={(done / total) * 100} className="mb-6 max-w-md" label={`${subject.name} progress`} />}
-      {total === 0 ? (
-        <Empty>No lessons have been published in this subject yet.</Empty>
-      ) : (
-        <ol className="overflow-hidden rounded-[var(--radius-card)] border border-ink-200/80 bg-white shadow-card" aria-label="Lessons">
-          {subject.lessons.map((l, i) => (
-            <li key={l.id} className="border-t border-ink-100 first:border-t-0">
-              <Link href={`/student/lessons/${l.id}`} className="flex items-center gap-4 px-5 py-4 transition hover:bg-paper/70">
-                <Numeral n={i + 1} done={l.learnt} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-[17px] text-ink-950">{l.title}</span>
-                  {l.description && <span className="mt-0.5 block truncate text-sm text-ink-500">{l.description}</span>}
-                </span>
-                {l.state === "confirmed" ? <Badge tone="green">Confirmed</Badge> : l.state === "learnt" ? <Badge tone="green">Learnt</Badge> : l.state === "finished" ? <Badge tone="green">Finished reading</Badge> : l.state === "viewed" ? <Badge tone="accent">{l.pageCount ? `Read ${l.percent}%` : "In progress"}</Badge> : <Badge>New</Badge>}
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
+      <Link href="/student" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-extrabold text-ink-700 shadow-card hover:text-ink-950">
+        ← My shelves
+      </Link>
+      <h1 className="mt-4 font-display text-[36px] leading-tight font-extrabold text-ink-950">{subject.name}</h1>
+      <p className="mt-1 text-[17px] font-semibold text-ink-600">{total === 0 ? "No books yet" : finished === total ? "You have finished every book here!" : `${finished} of ${total} book${total === 1 ? "" : "s"} finished`}</p>
+      <div className="mt-8">{total === 0 ? <Empty>No books have been published in this subject yet.</Empty> : <Bookshelf books={subject.lessons} hrefFor={(b) => `/student/lessons/${b.id}`} coverWidth={120} />}</div>
     </>
   );
 }

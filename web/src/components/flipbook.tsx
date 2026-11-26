@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PageFlip } from "page-flip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { ActivityPad } from "./live/activity-pad";
+import { StickerBurst } from "./child/sticker-burst";
 import type { Stroke } from "@/lib/strokes";
 
 /** Faint diagonal name across the page so a screenshot identifies its source. */
@@ -122,6 +123,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
     if (document.visibilityState === "visible") shown.current = { pages, since: Date.now() };
   }, []);
   const [earned, setEarned] = useState<{ id: string; emoji: string; label: string }[]>([]);
+  const clearEarned = useCallback(() => setEarned([]), []);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const report = useCallback((page: number, pageCount: number, immediate = false) => {
     const t = trackRef.current;
@@ -137,10 +139,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
         if (res.ok) {
           const data = (await res.json()) as { percent: number; finished: boolean; earned?: { id: string; emoji: string; label: string }[] };
           onProgressRef.current?.({ page: body.page, pageCount: body.pageCount, percent: data.percent, finished: data.finished });
-          if (data.earned?.length) {
-            setEarned(data.earned);
-            setTimeout(() => setEarned([]), 6000);
-          }
+          if (data.earned?.length) setEarned(data.earned);
         }
       } catch {
         /* offline or navigating away; the next turn will report again */
@@ -511,18 +510,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
   return (
     <div className="relative flex flex-col items-center gap-3">
       {colourPage && colouring && <ActivityPad key={colourPage.page} mode="colouring" page={colourPage.page} src={src} initialStrokes={colourPage.strokes} onSave={(strokes) => saveColouring(colourPage.page, strokes)} onClose={() => setColourPage(null)} />}
-      {earned.length > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center" role="status" aria-live="polite">
-          <div className="flex items-center gap-3 rounded-full bg-amber-300 px-5 py-2.5 text-ink-950 shadow-lift">
-            <span className="text-2xl" aria-hidden>
-              {earned.map((e) => e.emoji).join(" ")}
-            </span>
-            <span className="font-semibold">
-              New sticker{earned.length === 1 ? "" : "s"}: {earned.map((e) => e.label).join(", ")}
-            </span>
-          </div>
-        </div>
-      )}
+      {earned.length > 0 && <StickerBurst earned={earned} onDone={clearEarned} />}
       <div className="w-full rounded-xl bg-ink-950 p-3 sm:p-6" role="region" aria-label={`${title}, book view`} aria-busy={status.kind === "opening"}>
         {status.kind === "opening" && (
           <div className="flex h-[60vh] flex-col items-center justify-center text-sm text-ink-200" role="status">

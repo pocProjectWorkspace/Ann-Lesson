@@ -66,6 +66,83 @@
   --accent-fg: #ffffff;
 }
 
+/*
+ * The child world (students, and parents reading at home): warm oat paper, plum ink,
+ * lagoon accent, sunflower for rewards, rounded display type, bigger text and targets.
+ */
+[data-world="child"] {
+  --color-paper: #fbf4e6;
+  --color-paper-deep: #f1e6d0;
+  --color-ink-950: #2a1f3d;
+  --color-ink-900: #352a4a;
+  --color-ink-800: #463a5e;
+  --color-ink-700: #5a4e72;
+  --color-ink-500: #7a7090;
+  --color-ink-400: #9c93ad;
+  --color-ink-300: #c6bfd2;
+  --color-ink-200: #e2dbe9;
+  --color-ink-100: #efe9f1;
+  --accent: #0f8b8d;
+  --accent-soft: #d7f1ee;
+  --accent-fg: #ffffff;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), var(--font-nunito), system-ui, sans-serif;
+  --radius-card: 22px;
+  --shadow-card: 0 1px 2px rgb(42 31 61 / 0.06), 0 10px 24px -14px rgb(42 31 61 / 0.25);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  color: var(--color-ink-900);
+  background: var(--color-paper);
+}
+[data-world="child"] h1,
+[data-world="child"] h2,
+[data-world="child"] h3,
+[data-world="child"] .font-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.6;
+  }
+}
+.confetti {
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes sticker-drop {
+  0% {
+    transform: translateY(-40px) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(8px) scale(1.05);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-4px) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.sticker-drop {
+  animation: sticker-drop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+}
+
 html {
   color-scheme: light;
 }
