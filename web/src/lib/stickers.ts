@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { audit } from "./audit";
 import { notifyUsers } from "./notify";
+import { notifyGuardians } from "./family";
 import type { Session } from "./auth";
 import { bestStreak, currentStreak, dayString, localDay } from "./streaks";
 
@@ -158,5 +159,6 @@ export async function giveSticker(session: Pick<Session, "userId" | "name" | "sc
   await db.sticker.createMany({ data: students.map((s) => ({ schoolId, studentId: s.id, kind, note, givenById: session.userId })) });
   await audit(session, { action: "sticker.give", targetType: "Class", targetId: classId, summary: `Gave ${k.emoji} ${k.label} to ${students.map((s) => s.name).join(", ")}${note ? ` (${note})` : ""}`, meta: { kind, studentIds: students.map((s) => s.id) } });
   await notifyUsers(students.map((s) => s.id), { title: `${k.emoji} You got a sticker: ${k.label}`, body: note ? `${note} · from ${session.name}` : `From ${session.name}`, href: "/student" });
+  await notifyGuardians(students.map((s) => s.id), (child) => ({ title: `${k.emoji} ${child} got a sticker: ${k.label}`, body: note ? `${note} · from ${session.name}` : `From ${session.name}` }));
   return students;
 }

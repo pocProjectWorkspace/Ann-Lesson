@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 const PASSWORD = "Learn1234";
+const PARENT_PASSWORD = "Family1234";
 const TEACHER_PASSWORD = "Teach1234";
 const ADMIN_PASSWORD = "Welcome123";
 
@@ -122,9 +123,20 @@ async function main() {
           console.log(`  + student ${s.name} (${s.username})`);
         }
       }
+      // One demo parent per class, linked to its first student.
+      const firstStudent = spec.students[0] && (await prisma.user.findFirst({ where: { schoolId: school.id, username: { equals: spec.students[0].username, mode: "insensitive" } } }));
+      if (firstStudent) {
+        const parentUsername = `P${spec.students[0].username.replace(/^[A-Za-z]+/, "")}`;
+        let parent = await prisma.user.findFirst({ where: { schoolId: school.id, username: { equals: parentUsername, mode: "insensitive" } } });
+        if (!parent) {
+          parent = await prisma.user.create({ data: { schoolId: school.id, role: "PARENT", name: `${firstStudent.name.split(" ").slice(-1)[0]} family`, username: parentUsername, passwordHash: await bcrypt.hash(PARENT_PASSWORD, 10) } });
+          console.log(`  + parent ${parent.name} (${parentUsername})`);
+        }
+        await prisma.guardianLink.upsert({ where: { parentId_studentId: { parentId: parent.id, studentId: firstStudent.id } }, create: { parentId: parent.id, studentId: firstStudent.id, relation: "Parent" }, update: {} });
+      }
     }
   }
-  console.log(`\nDone. Students sign in with password ${PASSWORD}, teachers with ${TEACHER_PASSWORD}. Add lessons and PDFs from the school admin's Classes & syllabus page.`);
+  console.log(`\nDone. Students sign in with password ${PASSWORD}, teachers with ${TEACHER_PASSWORD}, parents (P001...) with ${PARENT_PASSWORD}. Add lessons and PDFs from the school admin's Classes & syllabus page.`);
 }
 
 main()

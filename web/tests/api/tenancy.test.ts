@@ -168,6 +168,31 @@ describe("tenant isolation", () => {
     expect((await api(`/api/mobile/classes/${greenwoodClassId}/alerts`, { token: rTeacher })).status).toBe(404);
     expect((await api(`/api/mobile/classes/${greenwoodClassId}/alerts`, { method: "POST", token: gTeacher, body: JSON.stringify({ alertId: "00000000-0000-4000-8000-000000000000" }) })).status).toBe(404);
   });
+  it("parent companion: a parent sees only their child, can open the child's book read-only, and hears about stickers", async () => {
+    const parent = (await login(users.greenwoodParent.school, users.greenwoodParent.username, users.greenwoodParent.password)).token;
+    type Fam = { role: string; children: { id: string; name: string; tonight: { fileId: string | null; lessonId: string } | null; stickers: unknown[]; week: { days: number } }[] };
+    const home = await api<Fam>("/api/mobile/home", { token: parent });
+    expect(home.status).toBe(200);
+    expect(home.data!.role).toBe("PARENT");
+    // The demo parent is linked to the first child of each class, so at least Aarav.
+    expect(home.data!.children.length).toBeGreaterThanOrEqual(1);
+    const child = home.data!.children.find((c) => c.name === "Aarav Mehta")!;
+    expect(child).toBeTruthy();
+    // The child's book opens; another school's does not; nothing is written to the child's progress.
+    expect((await api(`/api/files/${greenwoodLesson.files[0].id}`, { token: parent })).status).toBe(200);
+    const riverside = (await api<{ subjects: { lessons: { id: string }[] }[] }>("/api/mobile/home", { token: rStudent })).data!;
+    const rLesson = (await api<{ files: { id: string }[] }>(`/api/mobile/lessons/${riverside.subjects.flatMap((s) => s.lessons)[0].id}`, { token: rStudent })).data!;
+    expect((await api(`/api/files/${rLesson.files[0].id}`, { token: parent })).status).toBe(403);
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: parent, body: JSON.stringify({ page: 1, pageCount: 4 }) })).status).toBe(403);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/grades`, { token: parent })).status).toBe(403);
+    expect((await api(`/api/live/${greenwoodClassId}`, { token: parent })).status).toBe(403);
+    // A sticker from the teacher reaches the parent too.
+    const list = await api<{ students: { id: string; username: string }[] }>(`/api/mobile/classes/${greenwoodClassId}/stickers`, { token: gTeacher });
+    const me = list.data!.students.find((s) => s.username === users.greenwoodStudent.username)!;
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentIds: [me.id], kind: "star", note: "Shone in circle time" }) })).status).toBe(200);
+    const notes = await api<{ items: { title: string; body: string | null }[] }>("/api/mobile/notifications", { token: parent });
+    expect(notes.data!.items.some((n) => n.title.includes("Aarav got a sticker: Star of the day"))).toBe(true);
+  });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
     const fileId = greenwoodLesson.files[0].id;

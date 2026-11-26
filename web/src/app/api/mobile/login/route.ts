@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   const user = await db.user.findFirst({ where: { schoolId: school.id, username: { equals: username, mode: "insensitive" } }, include: { class: true } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) return failed(401, "Incorrect username or password.");
   if (!user.isActive) return fail(403, "Your account is inactive. Contact your school admin.");
-  if (user.role !== "STUDENT" && user.role !== "TEACHER") return fail(403, "The mobile app is for teachers and students. Admins use the web app.");
+  if (user.role !== "STUDENT" && user.role !== "TEACHER" && user.role !== "PARENT") return fail(403, "The mobile app is for teachers, students and parents. Admins use the web app.");
   if (mustUseSso(school, user)) return fail(403, `${school.name} signs in with ${providerLabel[school.authMode as AuthMode]}. Use the school account button.`);
 
   recordSuccess(ipKey);

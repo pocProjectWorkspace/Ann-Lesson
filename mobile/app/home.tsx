@@ -73,7 +73,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         {offline ? <OfflineBanner cachedAt={cachedAt} /> : null}
         <View style={{ marginBottom: 4 }}>
-          <Subtitle>{home?.role === "STUDENT" ? home.class?.name ?? "No class assigned yet" : "Your classes"}</Subtitle>
+          <Subtitle>{home?.role === "STUDENT" ? home.class?.name ?? "No class assigned yet" : home?.role === "PARENT" ? "Family" : "Your classes"}</Subtitle>
           <Title>
             {greeting()}, {firstName}
           </Title>
@@ -167,6 +167,64 @@ export default function HomeScreen() {
             })
           ))}
 
+        {home?.role === "PARENT" &&
+          (home.children.length === 0 ? (
+            <Empty>Your school has not linked a child to your account yet. Ask the school office.</Empty>
+          ) : (
+            home.children.map((c, i) => (
+              <SpineCard key={c.id} index={i}>
+                <Text style={{ fontSize: 20, fontWeight: "700", color: palette.ink950, fontFamily: "serif" }}>{c.name}</Text>
+                <Muted>
+                  {c.className ?? "No class yet"}
+                  {c.teachers.length ? ` · ${c.teachers.join(", ")}` : ""}
+                </Muted>
+                <Text style={{ marginTop: 6, color: c.streak.current ? "#9a3412" : colors.muted, fontWeight: "600", fontSize: 13 }}>{c.streak.current ? `🔥 ${c.streak.current} day${c.streak.current === 1 ? "" : "s"} in a row${c.streak.readToday ? "" : " · not read today yet"}` : "No streak this week. One page tonight starts one."}</Text>
+                <View style={{ flexDirection: "row", gap: 20, marginTop: 8 }}>
+                  <Stat label="Days this week" value={c.week.days} />
+                  <Stat label="Pages" value={c.week.pages} />
+                  <Stat label="Books" value={`${c.books.finished}/${c.books.total}`} />
+                </View>
+                {c.tonight ? (
+                  <Pressable onPress={() => c.tonight?.fileId && router.push({ pathname: "/viewer/[fileId]", params: { fileId: c.tonight.fileId, title: c.tonight.title } })} accessibilityRole="button" accessibilityLabel={`Read ${c.tonight.title} together`} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.primary + "55", backgroundColor: colors.primarySoft + "99", padding: 12 }}>
+                    <Text style={{ fontSize: 22 }}>📖</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>{c.tonight.again ? "Read again together tonight" : "Read together tonight"}</Text>
+                      <Text style={{ color: palette.ink950, fontWeight: "700", fontFamily: "serif", fontSize: 16 }} numberOfLines={1}>
+                        {c.tonight.title}
+                      </Text>
+                      <Muted>
+                        {c.tonight.again ? "Every book finished; favourites are worth a second read" : c.tonight.started && c.tonight.pageCount ? `${c.firstName} is on page ${Math.max(1, c.tonight.lastPage)} of ${c.tonight.pageCount}` : "Not started yet"}
+                        {c.tonight.readToMe ? " · teacher reads aloud" : ""}
+                      </Muted>
+                    </View>
+                  </Pressable>
+                ) : null}
+                {c.stickers.length > 0 ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    {c.stickers.map((s) => (
+                      <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#fde68a", backgroundColor: "#fffbeb", paddingVertical: 4, paddingLeft: 6, paddingRight: 10 }} accessibilityLabel={`${s.label}${s.note ? ", " + s.note : ""}`}>
+                        <Text style={{ fontSize: 16 }}>{s.emoji}</Text>
+                        <Text style={{ fontWeight: "700", color: palette.ink900, fontSize: 12 }}>{s.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {c.grades && c.grades.subjects.some((g) => g.rating) ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={{ fontWeight: "700", color: palette.ink950, fontSize: 13 }}>Teacher&apos;s stars{c.grades.rank ? ` · rank ${c.grades.rank} of ${c.grades.classSize}` : ""}</Text>
+                    {c.grades.subjects.filter((g) => g.rating).map((g) => (
+                      <View key={g.id} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 }}>
+                        <Text style={{ color: palette.ink900 }}>{g.name}</Text>
+                        <Text style={{ color: colors.muted }}>
+                          <Text style={{ color: colors.primary }}>{"★".repeat(g.rating ?? 0) + "☆".repeat(5 - (g.rating ?? 0))}</Text> {g.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </SpineCard>
+            ))
+          ))}
         {home?.role === "TEACHER" &&
           (home.classes.length === 0 ? (
             <Empty>You have not been assigned to any class yet. Ask your school admin.</Empty>
@@ -191,7 +249,7 @@ export default function HomeScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <View>
       <Muted>{label}</Muted>

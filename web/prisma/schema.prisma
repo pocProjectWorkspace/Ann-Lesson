@@ -12,6 +12,7 @@ enum Role {
   SCHOOL_ADMIN
   TEACHER
   STUDENT
+  PARENT
 }
 
 /// One tenant. Every school-scoped row carries schoolId.
@@ -90,6 +91,8 @@ model User {
   pageDwell           PageDwell[]
   supportAlerts       SupportAlert[]      @relation("AlertStudent")
   alertsHandled       SupportAlert[]      @relation("AlertHandler")
+  children            GuardianLink[]      @relation("ParentOf")
+  guardians           GuardianLink[]      @relation("ChildOf")
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
   gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
@@ -483,4 +486,19 @@ model SupportAlert {
 
   @@index([classId, resolvedAt])
   @@index([schoolId])
+}
+
+// A parent (role PARENT) linked to a child (role STUDENT) in the same school.
+model GuardianLink {
+  id        String   @id @default(uuid())
+  parentId  String
+  studentId String
+  relation  String?
+  createdAt DateTime @default(now())
+
+  parent  User @relation("ParentOf", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("ChildOf", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([studentId])
 }

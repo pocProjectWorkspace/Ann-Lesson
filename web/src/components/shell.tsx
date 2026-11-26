@@ -10,6 +10,7 @@ const roleLabels = {
   SCHOOL_ADMIN: "School admin",
   TEACHER: "Teacher",
   STUDENT: "Student",
+  PARENT: "Parent",
 } as const;
 
 function Mark() {

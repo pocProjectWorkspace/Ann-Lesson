@@ -230,7 +230,7 @@ export async function resetSchoolUserPassword(_prev: ActionState, formData: Form
   const session = await requireSchoolRole("SCHOOL_ADMIN");
   const parsed = z.object({ userId: uuid, password: passwordSchema }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const user = await db.user.findFirst({ where: { id: parsed.data.userId, schoolId: session.schoolId, role: { in: ["TEACHER", "STUDENT"] } } });
+  const user = await db.user.findFirst({ where: { id: parsed.data.userId, schoolId: session.schoolId, role: { in: ["TEACHER", "STUDENT", "PARENT"] } } });
   if (!user) return { error: "User not found" };
   await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(parsed.data.password) } });
   await revokeUserSessions(user.id);
@@ -241,12 +241,56 @@ export async function resetSchoolUserPassword(_prev: ActionState, formData: Form
 export async function deleteSchoolUser(formData: FormData) {
   const session = await requireSchoolRole("SCHOOL_ADMIN");
   const id = String(formData.get("id") ?? "");
-  const user = await db.user.findFirst({ where: { id, schoolId: session.schoolId, role: { in: ["TEACHER", "STUDENT"] } } });
+  const user = await db.user.findFirst({ where: { id, schoolId: session.schoolId, role: { in: ["TEACHER", "STUDENT", "PARENT"] } } });
   if (!user) return;
   await db.user.delete({ where: { id } });
   await audit(session, { action: "user.delete", targetType: "User", targetId: id, summary: `Deleted ${user.role.toLowerCase()} ${user.name} (${user.username})` });
   revalidatePath("/school/teachers");
   revalidatePath("/school/students");
+  revalidatePath("/school/families");
+}
+
+/* ---------------- Families ---------------- */
+
+const relationSchema = z.string().trim().max(40).optional();
+
+export async function createParent(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const { schoolId } = session;
+  const parsed = z.object({ name: nameSchema, username: usernameSchema, email: optionalEmail, password: passwordSchema, studentId: uuid, relation: relationSchema }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const d = parsed.data;
+  if (await db.user.findFirst({ where: { schoolId, username: { equals: d.username, mode: "insensitive" } } })) return { error: "That ID is already used in your school" };
+  const student = await db.user.findFirst({ where: { id: d.studentId, schoolId, role: "STUDENT" }, select: { id: true, name: true } });
+  if (!student) return { error: "Child not found" };
+  const parent = await db.user.create({ data: { schoolId, role: "PARENT", name: d.name, username: d.username, email: d.email || null, passwordHash: await hashPassword(d.password), children: { create: { studentId: student.id, relation: d.relation || null } } } });
+  await audit(session, { action: "parent.create", targetType: "User", targetId: parent.id, summary: `Added parent ${d.name} (${d.username}) for ${student.name}` });
+  revalidatePath("/school/families");
+  return { success: `Parent ${d.name} added and linked to ${student.name}` };
+}
+
+export async function linkParent(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const { schoolId } = session;
+  const parsed = z.object({ parentId: uuid, studentId: uuid, relation: relationSchema }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const [parent, student] = await Promise.all([db.user.findFirst({ where: { id: parsed.data.parentId, schoolId, role: "PARENT" }, select: { id: true, name: true } }), db.user.findFirst({ where: { id: parsed.data.studentId, schoolId, role: "STUDENT" }, select: { id: true, name: true } })]);
+  if (!parent || !student) return { error: "Parent or child not found" };
+  await db.guardianLink.upsert({ where: { parentId_studentId: { parentId: parent.id, studentId: student.id } }, create: { parentId: parent.id, studentId: student.id, relation: parsed.data.relation || null }, update: { relation: parsed.data.relation || null } });
+  await audit(session, { action: "parent.link", targetType: "User", targetId: parent.id, summary: `Linked ${parent.name} to ${student.name}` });
+  revalidatePath("/school/families");
+  return { success: `${parent.name} is now linked to ${student.name}` };
+}
+
+export async function unlinkParent(formData: FormData) {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const parsed = z.object({ parentId: uuid, studentId: uuid }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const link = await db.guardianLink.findFirst({ where: { parentId: parsed.data.parentId, studentId: parsed.data.studentId, parent: { schoolId: session.schoolId } }, include: { parent: { select: { name: true } }, student: { select: { name: true } } } });
+  if (!link) return;
+  await db.guardianLink.delete({ where: { id: link.id } });
+  await audit(session, { action: "parent.unlink", targetType: "User", targetId: link.parentId, summary: `Unlinked ${link.parent.name} from ${link.student.name}` });
+  revalidatePath("/school/families");
 }
 
 /* ---------------- Classes ---------------- */

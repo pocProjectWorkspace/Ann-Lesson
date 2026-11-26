@@ -15,7 +15,7 @@ const schema = z.object({ token: z.string().min(10).max(200).regex(/^(ExponentPu
  * else's phone. Presenting the token proves possession of the device: Expo issues
  * it only to that app install and this API never returns it. Rebinding is audited.
  */
-export const POST = withAuth(["STUDENT", "TEACHER"], async (req, session) => {
+export const POST = withAuth(["STUDENT", "TEACHER", "PARENT"], async (req, session) => {
   const body = schema.safeParse(await readJson(req));
   if (!body.success) throw new ApiError(400, body.error.issues[0]?.message ?? "Invalid token");
   const existing = await db.pushToken.findUnique({ where: { token: body.data.token }, select: { userId: true } });
@@ -31,7 +31,7 @@ export const POST = withAuth(["STUDENT", "TEACHER"], async (req, session) => {
 });
 
 /** DELETE /api/mobile/push-token { token } → stops push to this device (sign-out). */
-export const DELETE = withAuth(["STUDENT", "TEACHER"], async (req, session) => {
+export const DELETE = withAuth(["STUDENT", "TEACHER", "PARENT"], async (req, session) => {
   const body = z.object({ token: z.string().min(1) }).safeParse(await readJson(req));
   if (!body.success) throw new ApiError(400, "token is required");
   await db.pushToken.deleteMany({ where: { token: body.data.token, userId: session.userId } });

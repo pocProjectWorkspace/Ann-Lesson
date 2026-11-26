@@ -30,10 +30,10 @@ export const palette = {
   violet: "#4f46e5",
 };
 
-export const roleAccent = (role?: "STUDENT" | "TEACHER" | null) => (role === "TEACHER" ? { main: palette.teal, soft: palette.tealBg } : { main: palette.marigold, soft: palette.marigoldBg });
+export const roleAccent = (role?: "STUDENT" | "TEACHER" | "PARENT" | null) => (role === "TEACHER" ? { main: palette.teal, soft: palette.tealBg } : { main: palette.marigold, soft: palette.marigoldBg });
 
 let accent = roleAccent("STUDENT");
-export function setAccent(role?: "STUDENT" | "TEACHER" | null) {
+export function setAccent(role?: "STUDENT" | "TEACHER" | "PARENT" | null) {
   accent = roleAccent(role);
 }
 export const getAccent = () => accent;

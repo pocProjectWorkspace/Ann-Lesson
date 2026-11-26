@@ -4,7 +4,7 @@ import { hashPassword, revokeUserSessions, verifyPassword } from "@/lib/auth";
 import { ApiError, json, readJson, withAuth } from "@/lib/api";
 
 /** POST /api/mobile/password { currentPassword, newPassword } → signs out other devices. */
-export const POST = withAuth(["STUDENT", "TEACHER"], async (req, session) => {
+export const POST = withAuth(["STUDENT", "TEACHER", "PARENT"], async (req, session) => {
   const body = z
     .object({ currentPassword: z.string().min(1), newPassword: z.string().min(8, "New password must be at least 8 characters").max(100) })
     .safeParse(await readJson(req));

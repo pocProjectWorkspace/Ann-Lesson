@@ -9,6 +9,7 @@ import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/utils";
 import { giveSticker, isTeacherSticker, stickerKind } from "@/lib/stickers";
 import { handleAlert } from "@/lib/insights";
+import { notifyGuardians } from "@/lib/family";
 
 async function teacherLesson(teacherId: string, lessonId: string) {
   return db.lesson.findFirst({ where: { id: lessonId, subject: { class: { teachers: { some: { teacherId } } } } }, include: { subject: { select: { classId: true, name: true } } } });
@@ -87,6 +88,7 @@ export async function saveGrades(_prev: ActionState, formData: FormData): Promis
   if (writes) {
     await audit(session, { action: "grade.update", targetType: "Class", targetId: classId, summary: `Updated ${writes} grade${writes === 1 ? "" : "s"} for ${changed.size} student${changed.size === 1 ? "" : "s"}`, meta: { classId } });
     await Promise.all([...changed].map(([studentId, names]) => notifyUsers([studentId], { title: "Your grades were updated", body: [...names].filter(Boolean).join(", "), href: "/student" })));
+    await Promise.all([...changed].map(([studentId, names]) => notifyGuardians([studentId], (child) => ({ title: `${child}'s stars were updated`, body: [...names].filter(Boolean).join(", ") }))));
   }
   revalidatePath(`/teacher/classes/${classId}/grades`);
   revalidatePath(`/teacher/classes/${classId}`);

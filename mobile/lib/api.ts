@@ -70,7 +70,7 @@ function safeJson(text: string): unknown {
 
 /* ---------- Types mirrored from the web API ---------- */
 
-export type Role = "STUDENT" | "TEACHER";
+export type Role = "STUDENT" | "TEACHER" | "PARENT";
 export type User = {
   id: string;
   name: string;
@@ -104,7 +104,22 @@ export type Gradebook = {
 };
 export type ClassSummary = { id: string; name: string; academicYear: string | null; studentCount: number; subjectCount: number; lessonCount: number; learntPercent: number };
 export type TeacherHome = { role: "TEACHER"; classes: ClassSummary[] };
-export type Home = StudentHome | TeacherHome;
+export type FamilyChild = {
+  id: string;
+  name: string;
+  firstName: string;
+  className: string | null;
+  teachers: string[];
+  week: { days: number; pages: number };
+  streak: Streak;
+  books: { total: number; finished: number };
+  tonight: { lessonId: string; title: string; subjectName: string; fileId: string | null; lastPage: number; pageCount: number | null; percent: number; started: boolean; again?: boolean; readToMe: boolean } | null;
+  stickers: StickerItem[];
+  stickerCount: number;
+  grades: { overall: number | null; rank: number | null; classSize: number; subjects: { id: string; name: string; rating: number | null; label: string }[] } | null;
+};
+export type ParentHome = { role: "PARENT"; children: FamilyChild[] };
+export type Home = StudentHome | TeacherHome | ParentHome;
 
 export type TeacherLesson = { id: string; title: string; description: string | null; fileCount: number; published?: boolean; viewedCount: number; learntCount: number; confirmedCount: number };
 export type SupportAlert = { id: string; studentId: string; studentName: string; kind: string; lessonId: string | null; lessonTitle: string | null; page: number | null; detail: string; action: string; createdAt: string };

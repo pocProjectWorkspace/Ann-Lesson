@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { readLocalRange, signedUrl, statLocal } from "@/lib/storage";
+import { parentMayReadClass } from "@/lib/family";
 
 /**
  * GET /api/files/:id/narration?page=N → the teacher's voice clip for that page.
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   else if (session.schoolId !== file.schoolId) allowed = false;
   else if (session.role === "SCHOOL_ADMIN") allowed = true;
   else if (session.role === "TEACHER") allowed = !!(await db.teacherAssignment.findFirst({ where: { teacherId: session.userId, classId: file.lesson.subject.classId }, select: { id: true } }));
+  else if (session.role === "PARENT") allowed = await parentMayReadClass(session.userId, file.lesson.subject.classId);
   else if (session.role === "STUDENT") {
     const me = await db.user.findUnique({ where: { id: session.userId }, select: { classId: true } });
     allowed = !!me?.classId && me.classId === file.lesson.subject.classId;

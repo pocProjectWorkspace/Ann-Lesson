@@ -6,10 +6,11 @@ const PROTECTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/school", roles: ["SCHOOL_ADMIN"] },
   { prefix: "/teacher", roles: ["TEACHER"] },
   { prefix: "/student", roles: ["STUDENT"] },
-  { prefix: "/account", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
+  { prefix: "/family", roles: ["PARENT"] },
+  { prefix: "/account", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT", "PARENT"] },
   { prefix: "/board", roles: ["TEACHER", "SCHOOL_ADMIN"] },
   { prefix: "/api/live", roles: ["SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
-  { prefix: "/api/files", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"] },
+  { prefix: "/api/files", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT", "PARENT"] },
 ];
 
 const HOME: Record<string, string> = {
@@ -17,6 +18,7 @@ const HOME: Record<string, string> = {
   SCHOOL_ADMIN: "/school",
   TEACHER: "/teacher",
   STUDENT: "/student",
+  PARENT: "/family",
 };
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);

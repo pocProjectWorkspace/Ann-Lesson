@@ -33,6 +33,7 @@ export const users = {
   greenwoodStudent2: { school: "GREENWOOD", username: "N002", password: "Learn1234" },
   greenwoodTeacher: { school: "GREENWOOD", username: "sunita", password: "Teach1234" },
   greenwoodAdmin: { school: "GREENWOOD", username: "admin", password: "Welcome123" },
+  greenwoodParent: { school: "GREENWOOD", username: "P001", password: "Family1234" },
   riversideStudent: { school: "RIVERSIDE", username: "N001", password: "Learn1234" },
   riversideTeacher: { school: "RIVERSIDE", username: "sunita", password: "Teach1234" },
 };

@@ -3,7 +3,7 @@ import { json, withAuth } from "@/lib/api";
 import { className } from "@/lib/data";
 
 /** GET /api/mobile/me → current user, school and class. */
-export const GET = withAuth(["STUDENT", "TEACHER"], async (_req, session) => {
+export const GET = withAuth(["STUDENT", "TEACHER", "PARENT"], async (_req, session) => {
   const user = await db.user.findUniqueOrThrow({ where: { id: session.userId }, include: { school: true, class: true } });
   return json({
     id: user.id,

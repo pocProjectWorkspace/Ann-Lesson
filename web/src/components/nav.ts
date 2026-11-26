@@ -15,6 +15,7 @@ export function navFor(role: Role): NavItem[] {
         { href: "/school/classes", label: "Classes & syllabus" },
         { href: "/school/teachers", label: "Teachers" },
         { href: "/school/students", label: "Students" },
+        { href: "/school/families", label: "Families" },
         { href: "/school/billing", label: "Plan & billing" },
         { href: "/school/audit", label: "Activity" },
       ];
@@ -22,5 +23,7 @@ export function navFor(role: Role): NavItem[] {
       return [{ href: "/teacher", label: "My classes" }];
     case "STUDENT":
       return [{ href: "/student", label: "My lessons" }];
+    case "PARENT":
+      return [{ href: "/family", label: "My family" }];
   }
 }

@@ -274,6 +274,23 @@ board notes) under an `Activity`; closing the board closes any open activity. Ov
 event stream a child's submission reaches staff and that child only, never classmates,
 and `GET /api/live/:classId` returns all submissions to staff and only their own to a student.
 
+## Parent companion
+
+Parents are users with role `PARENT`, created by the school admin on `/school/families`
+and linked to one or more children (`GuardianLink`). They sign in like everyone else
+(school code, parent ID, password; the app too) and land on `/family`, which shows for
+each child: the reading streak, days and pages this week, books finished, the book to
+read together tonight (the one the child is in the middle of, with the page they are on
+and whether the teacher's read-to-me voice is available), the latest stickers with the
+teacher's notes, and the teacher's stars (rank only if the school shows ranks).
+
+Opening a book from the family page is read-only: the parent session never writes the
+child's progress, so teachers still see what the child did alone. Parents are notified
+when a teacher gives their child a sticker or stars. File and narration access for a
+parent is "a linked child is in that class", nothing more; parents have no access to
+live rooms, grades of other children, or class pages. `GET /api/mobile/home` returns
+`{ role: "PARENT", children: [...] }` for the app.
+
 ## Page insights and early-support alerts
 
 **Page insights** (`/teacher/lessons/:id/insights`, "Page insights" on the lesson page,

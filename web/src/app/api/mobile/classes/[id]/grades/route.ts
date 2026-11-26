@@ -4,6 +4,7 @@ import { ApiError, json, readJson, withAuth } from "@/lib/api";
 import { classGradebook, ratingLabel } from "@/lib/grades";
 import { audit } from "@/lib/audit";
 import { notifyUsers } from "@/lib/notify";
+import { notifyGuardians } from "@/lib/family";
 
 async function assertTeaches(teacherId: string, classId: string) {
   const a = await db.teacherAssignment.findFirst({ where: { teacherId, classId }, select: { id: true } });
@@ -39,7 +40,10 @@ export const POST = withAuth<{ id: string }>(["TEACHER"], async (req, session, {
   }
   if ((before?.rating ?? null) !== rating) {
     await audit(session, { action: "grade.update", targetType: "User", targetId: studentId, summary: `${student.name}: ${subject.name} ${rating ? `rated ${rating} (${ratingLabel(rating)})` : "grade removed"}`, meta: { subjectId, rating } });
-    if (rating) await notifyUsers([studentId], { title: `New grade in ${subject.name}`, body: `${rating} · ${ratingLabel(rating)}`, href: "/student" });
+    if (rating) {
+      await notifyUsers([studentId], { title: `New grade in ${subject.name}`, body: `${rating} · ${ratingLabel(rating)}`, href: "/student" });
+      await notifyGuardians([studentId], (child) => ({ title: `${child} got stars in ${subject.name}`, body: `${"★".repeat(rating)} ${ratingLabel(rating)}` }));
+    }
   }
   const book = await classGradebook(id);
   const me = book?.students.find((s) => s.id === studentId);

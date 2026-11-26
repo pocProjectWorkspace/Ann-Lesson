@@ -176,9 +176,10 @@ export const homeFor: Record<Role, string> = {
   SCHOOL_ADMIN: "/school",
   TEACHER: "/teacher",
   STUDENT: "/student",
+  PARENT: "/family",
 };
 
-export const ALL_ROLES: Role[] = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"];
+export const ALL_ROLES: Role[] = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT", "PARENT"];
 
 /** Require a logged-in user with one of the given roles; redirects otherwise. */
 export async function requireRole(...roles: Role[]): Promise<Session> {
