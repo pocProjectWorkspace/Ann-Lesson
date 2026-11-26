@@ -274,6 +274,31 @@ board notes) under an `Activity`; closing the board closes any open activity. Ov
 event stream a child's submission reaches staff and that child only, never classmates,
 and `GET /api/live/:classId` returns all submissions to staff and only their own to a student.
 
+## Stickers and streaks
+
+Two kinds of reward live on the child's home screen, in the app and on the web.
+
+- **Streaks.** Every page report from the viewer records a reading day, keyed by the
+  device's own calendar date (`day` on `POST /api/mobile/lessons/:id/position`; the
+  server accepts it when it is within a day of its own clock, so it works in any time
+  zone). The streak is the run of consecutive reading days ending today, or yesterday
+  when the child has not read yet today. The home screen shows the current streak, the
+  best, and whether today still needs reading.
+- **Badges** the platform awards once, automatically: first book, five and ten books,
+  100 and 500 pages, streaks of 3, 7 and 30 days, and "Subject star" for finishing every
+  book in a subject. They are checked on every page report, the viewer shows a short
+  "New sticker" banner, and the home screen says which badge is next and how far away.
+- **Teacher stickers** (Star of the day, Super reader, Great listener, Neat work, Brave
+  try, Kind friend, Helping hand, Little artist) are given from
+  `/teacher/classes/:id/stickers` on the web or "Stickers" in the app, to one or many
+  children at once with an optional note. The child is notified and the sticker shows
+  who gave it. The same page lists every child's streak and shelf.
+
+Data: `ReadingDay` (student, day, pages) and `Sticker` (kind, note, givenById, and
+`earnKey` so an automatic badge is awarded once). API for the app:
+`GET /api/mobile/home` carries `stickers` for students;
+`GET/POST /api/mobile/classes/:id/stickers` for teachers.
+
 ## Grades and ranking
 
 Teachers rate each student in each subject from 1 (needs support) to 5 (excellent), either

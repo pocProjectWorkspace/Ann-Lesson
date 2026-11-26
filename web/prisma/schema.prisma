@@ -83,6 +83,9 @@ model User {
   progress            LessonProgress[]
   boardNotes          BoardNote[]
   activitySubmissions ActivitySubmission[]
+  readingDays         ReadingDay[]
+  stickers            Sticker[]           @relation("StickerOwner")
+  stickersGiven       Sticker[]           @relation("StickerGiver")
   gradesReceived      SubjectGrade[]      @relation("GradedStudent")
   gradesGiven         SubjectGrade[]      @relation("GradedBy")
   sessions            Session[]
@@ -377,4 +380,37 @@ model ActivitySubmission {
   student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([activityId, studentId])
+}
+
+// One row per student per calendar day with any reading; the streak is the run of
+// consecutive days. "day" is YYYY-MM-DD in the child's own time zone.
+model ReadingDay {
+  id        String @id @default(uuid())
+  studentId String
+  day       String
+  pages     Int    @default(0)
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, day])
+}
+
+// A badge the platform awarded (givenById null, earnKey "studentId:kind" so it is
+// awarded once) or a sticker a teacher gave (givenById set, any number of times).
+model Sticker {
+  id        String   @id @default(uuid())
+  schoolId  String
+  studentId String
+  kind      String
+  note      String?
+  givenById String?
+  lessonId  String?
+  earnKey   String?  @unique
+  createdAt DateTime @default(now())
+
+  student User  @relation("StickerOwner", fields: [studentId], references: [id], onDelete: Cascade)
+  givenBy User? @relation("StickerGiver", fields: [givenById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, createdAt])
+  @@index([schoolId])
 }

@@ -27,6 +27,12 @@ type Status = { kind: "opening" } | { kind: "book"; total: number; rendered: num
  */
 export type ReadingTrack = { lessonId: string; startPage?: number; token?: string };
 
+/** The device's local calendar date, which is what a reading streak counts. */
+function localDay() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function positionUrl(track: ReadingTrack) {
   return `/api/mobile/lessons/${track.lessonId}/position${track.token ? `?t=${encodeURIComponent(track.token)}` : ""}`;
 }
@@ -91,12 +97,13 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
 
   // Debounced reporter: the latest page wins, and anything pending is flushed when the
   // tab is hidden or the component goes away (sendBeacon survives page unloads).
-  const pending = useRef<{ page: number; pageCount: number } | null>(null);
+  const pending = useRef<{ page: number; pageCount: number; day: string } | null>(null);
+  const [earned, setEarned] = useState<{ id: string; emoji: string; label: string }[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const report = useCallback((page: number, pageCount: number, immediate = false) => {
     const t = trackRef.current;
     if (!t) return;
-    pending.current = { page, pageCount };
+    pending.current = { page, pageCount, day: localDay() };
     const send = async () => {
       const body = pending.current;
       pending.current = null;
@@ -104,8 +111,12 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
       try {
         const res = await fetch(positionUrl(t), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true });
         if (res.ok) {
-          const data = (await res.json()) as { percent: number; finished: boolean };
+          const data = (await res.json()) as { percent: number; finished: boolean; earned?: { id: string; emoji: string; label: string }[] };
           onProgressRef.current?.({ page: body.page, pageCount: body.pageCount, percent: data.percent, finished: data.finished });
+          if (data.earned?.length) {
+            setEarned(data.earned);
+            setTimeout(() => setEarned([]), 6000);
+          }
         }
       } catch {
         /* offline or navigating away; the next turn will report again */
@@ -368,7 +379,19 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
   })();
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="relative flex flex-col items-center gap-3">
+      {earned.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-20 flex justify-center" role="status" aria-live="polite">
+          <div className="flex items-center gap-3 rounded-full bg-amber-300 px-5 py-2.5 text-ink-950 shadow-lift">
+            <span className="text-2xl" aria-hidden>
+              {earned.map((e) => e.emoji).join(" ")}
+            </span>
+            <span className="font-semibold">
+              New sticker{earned.length === 1 ? "" : "s"}: {earned.map((e) => e.label).join(", ")}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="w-full rounded-xl bg-ink-950 p-3 sm:p-6" role="region" aria-label={`${title}, book view`} aria-busy={status.kind === "opening"}>
         {status.kind === "opening" && (
           <div className="flex h-[60vh] flex-col items-center justify-center text-sm text-ink-200" role="status">

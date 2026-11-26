@@ -98,6 +98,37 @@ export default function HomeScreen() {
         ) : null}
 
         {home?.role === "STUDENT" && home.class ? <LiveJoinCard classId={home.class.id} /> : null}
+        {home?.role === "STUDENT" && home.stickers ? (
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: palette.ink950, fontFamily: "serif" }}>My stickers</Text>
+              <Text style={{ color: home.stickers.streak.current ? "#9a3412" : colors.muted, fontWeight: "600", fontSize: 13 }}>
+                {home.stickers.streak.current ? `🔥 ${home.stickers.streak.current} day${home.stickers.streak.current === 1 ? "" : "s"} in a row${home.stickers.streak.readToday ? "" : " · read today to keep it"}` : "Read today to start a streak"}
+              </Text>
+            </View>
+            {home.stickers.stickers.length === 0 ? (
+              <Muted>Your shelf is empty. Finish a book to earn your first sticker.</Muted>
+            ) : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                {home.stickers.stickers.slice(0, 12).map((s) => (
+                  <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#fde68a", backgroundColor: "#fffbeb", paddingVertical: 4, paddingLeft: 6, paddingRight: 10 }} accessibilityLabel={`${s.label}${s.note ? ", " + s.note : ""}${s.givenBy ? ", from " + s.givenBy : ""}`}>
+                    <Text style={{ fontSize: 18 }}>{s.emoji}</Text>
+                    <View>
+                      <Text style={{ fontWeight: "700", color: palette.ink900, fontSize: 13 }}>{s.label}</Text>
+                      {s.note || s.givenBy ? <Text style={{ color: colors.muted, fontSize: 11 }}>{s.note ? s.note : `from ${s.givenBy}`}</Text> : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+            {home.stickers.next ? (
+              <Muted>
+                Next up {home.stickers.next.emoji} {home.stickers.next.label}: {home.stickers.next.have} of {home.stickers.next.need} {home.stickers.next.unit}
+                {home.stickers.next.need === 1 ? "" : "s"}
+              </Muted>
+            ) : null}
+          </Card>
+        ) : null}
         {home?.role === "STUDENT" && home.grades && home.grades.subjects.some((s) => s.rating) ? (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>

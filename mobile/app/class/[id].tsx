@@ -25,6 +25,7 @@ export default function ClassScreen() {
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Button title="Board remote" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/remote/[id]", params: { id: cls.id } })} />
               <Button title="Grades" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/grades/[id]", params: { id: cls.id } })} />
+              <Button title="Stickers" variant="secondary" style={{ minHeight: 38, paddingVertical: 8 }} onPress={() => router.push({ pathname: "/stickers/[id]", params: { id: cls.id } })} />
             </View>
           </View>
         ) : null}

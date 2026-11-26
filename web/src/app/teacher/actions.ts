@@ -7,6 +7,7 @@ import { requireSchoolRole } from "@/lib/auth";
 import { notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import type { ActionState } from "@/lib/utils";
+import { giveSticker, isTeacherSticker, stickerKind } from "@/lib/stickers";
 
 async function teacherLesson(teacherId: string, lessonId: string) {
   return db.lesson.findFirst({ where: { id: lessonId, subject: { class: { teachers: { some: { teacherId } } } } }, include: { subject: { select: { classId: true, name: true } } } });
@@ -90,4 +91,22 @@ export async function saveGrades(_prev: ActionState, formData: FormData): Promis
   revalidatePath(`/teacher/classes/${classId}`);
   revalidatePath("/student");
   return { success: writes ? `Saved ${writes} grade${writes === 1 ? "" : "s"}` : "No changes to save" };
+}
+
+/** Teacher gives one sticker kind to the ticked children of a class they teach. */
+export async function giveStickers(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSchoolRole("TEACHER");
+  const classId = String(formData.get("classId") ?? "");
+  const kind = String(formData.get("kind") ?? "");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 120) || null;
+  if (!isTeacherSticker(kind)) return { error: "Pick a sticker" };
+  const teaches = await db.teacherAssignment.findFirst({ where: { teacherId: session.userId, classId }, select: { id: true } });
+  if (!teaches) return { error: "You do not teach this class" };
+  const studentIds = [...formData.keys()].map((k) => /^s:([0-9a-f-]{36})$/.exec(k)?.[1]).filter((x): x is string => !!x);
+  if (!studentIds.length) return { error: "Tick at least one child" };
+  const given = await giveSticker(session, classId, studentIds, kind, note);
+  revalidatePath(`/teacher/classes/${classId}/stickers`);
+  revalidatePath("/student");
+  const k = stickerKind(kind);
+  return { success: `${k.emoji} ${k.label} given to ${given.map((s) => s.name.split(" ")[0]).join(", ")}` };
 }

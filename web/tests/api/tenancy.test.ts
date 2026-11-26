@@ -88,6 +88,41 @@ describe("tenant isolation", () => {
     expect((await api(`/api/live/${greenwoodClassId}`, { method: "POST", token: gTeacher, body: JSON.stringify({ type: "close" }) })).status).toBe(200);
     expect((await api<{ state: unknown }>(`/api/live/${greenwoodClassId}`, { token: gStudent })).data!.state).toBeNull();
   });
+  it("stickers and streaks: reading counts towards a streak, badges arrive on their own, teachers give stickers, students see them", async () => {
+    type Shelf = { streak: { current: number; best: number; readToday: boolean }; stickers: { id: string; kind: string; label: string; givenBy: string | null; note: string | null }[]; count: number };
+    const today = new Date().toISOString().slice(0, 10);
+    // A page report with the device's date starts (or continues) today's streak.
+    const pos = await api<{ streak: Shelf["streak"]; earned: { kind: string }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: gStudent, body: JSON.stringify({ page: 1, pageCount: 4, day: today }) });
+    expect(pos.status).toBe(200);
+    expect(pos.data!.streak.readToday).toBe(true);
+    expect(pos.data!.streak.current).toBeGreaterThanOrEqual(1);
+    // A date far from the server's is ignored rather than trusted.
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: gStudent, body: JSON.stringify({ page: 2, pageCount: 4, day: "2001-01-01" }) })).status).toBe(200);
+    // Finishing the book earns the first-book badge, once.
+    expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/position`, { method: "POST", token: gStudent, body: JSON.stringify({ page: 4, pageCount: 4, day: today }) })).status).toBe(200);
+    const home = await api<{ stickers: Shelf }>("/api/mobile/home", { token: gStudent });
+    expect(home.data!.stickers.stickers.filter((s) => s.kind === "first-book")).toHaveLength(1);
+    expect(home.data!.stickers.streak.readToday).toBe(true);
+    // The teacher gives a sticker with a note; the student sees it and gets told.
+    const list = await api<{ kinds: { kind: string }[]; students: { id: string; username: string }[] }>(`/api/mobile/classes/${greenwoodClassId}/stickers`, { token: gTeacher });
+    expect(list.status).toBe(200);
+    const me = list.data!.students.find((s) => s.username === users.greenwoodStudent.username)!;
+    const before = home.data!.stickers.count;
+    const give = await api<{ given: string[] }>(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentIds: [me.id], kind: "listener", note: "Listened so well" }) });
+    expect(give.status).toBe(200);
+    expect(give.data!.given).toEqual([me.id]);
+    const after = (await api<{ stickers: Shelf }>("/api/mobile/home", { token: gStudent })).data!.stickers;
+    expect(after.count).toBe(before + 1);
+    expect(after.stickers[0]).toMatchObject({ kind: "listener", note: "Listened so well" });
+    expect(typeof after.stickers[0].givenBy).toBe("string");
+    const notes = await api<{ items: { title: string }[] }>("/api/mobile/notifications", { token: gStudent });
+    expect(notes.data!.items.some((n) => n.title.includes("Great listener"))).toBe(true);
+    // Guard rails: unknown kinds, students, and teachers of other schools.
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: gTeacher, body: JSON.stringify({ studentIds: [me.id], kind: "first-book" }) })).status).toBe(400);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: gStudent, body: JSON.stringify({ studentIds: [me.id], kind: "star" }) })).status).toBe(403);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { method: "POST", token: rTeacher, body: JSON.stringify({ studentIds: [me.id], kind: "star" }) })).status).toBe(404);
+    expect((await api(`/api/mobile/classes/${greenwoodClassId}/stickers`, { token: rTeacher })).status).toBe(404);
+  });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
     const fileId = greenwoodLesson.files[0].id;

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireSchoolRole } from "@/lib/auth";
 import { studentHome } from "@/lib/data";
 import { studentGrades } from "@/lib/grades";
+import { studentStickers } from "@/lib/stickers";
+import { StickerShelf } from "@/components/sticker-shelf";
 import { LiveBanner } from "@/components/live/live-banner";
 import { Empty, ProgressBar, spineColor } from "@/components/ui";
 import { now } from "@/lib/time";
@@ -13,7 +15,7 @@ function greeting(d: Date) {
 
 export default async function StudentHome() {
   const session = await requireSchoolRole("STUDENT");
-  const [home, grades] = await Promise.all([studentHome(session.userId), studentGrades(session.userId)]);
+  const [home, grades, shelf] = await Promise.all([studentHome(session.userId), studentGrades(session.userId), studentStickers(session.userId)]);
   const firstName = session.name.split(" ")[0];
   const hello = greeting(now());
 
@@ -76,6 +78,8 @@ export default async function StudentHome() {
           </div>
         </Link>
       )}
+
+      <StickerShelf streak={shelf.streak} stickers={shelf.stickers} next={shelf.next} />
 
       {grades && grades.subjects.some((s) => s.rating) && (
         <section className="mt-8 rounded-[var(--radius-card)] border border-ink-200/80 bg-white px-5 py-4 shadow-card" aria-label="My grades">
