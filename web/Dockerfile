@@ -36,8 +36,9 @@ RUN printf "{\"name\":\"tools\",\"private\":true,\"type\":\"commonjs\"}" > packa
 
 # ---- runtime ----
 FROM base AS runner
-# pg_dump for nightly backups (a newer client dumps older servers fine).
-RUN apk add --no-cache postgresql17-client || apk add --no-cache postgresql16-client
+# pg_dump for nightly backups. Must be at least the server's major version (Railway runs
+# PostgreSQL 18); a newer client dumps older servers fine. Bump when the database is upgraded.
+RUN apk add --no-cache postgresql18-client
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
