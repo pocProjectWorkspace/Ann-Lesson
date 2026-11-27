@@ -256,6 +256,23 @@ with a polling fallback (`GET /api/live/:classId`); commands are
 `POST /api/live/:classId` (open, page, follow, pick, close for staff; here, leave for
 everyone). Room state is the `LiveSession` row; fan-out is in memory, per app instance.
 
+## Pilot readiness, legal pack and backups
+
+- `docs/PILOT-CHECKLIST.md`: what to do before the first school, including the real
+  Microsoft/Google sign-in round trip and the teacher's-day walkthrough.
+- Legal pack, published at `/legal/terms`, `/legal/privacy`, `/legal/dpa` and
+  `/legal/security`, rendered from `web/content/legal/*.md` (drafts with placeholders,
+  for a lawyer's review). Linked from the login page.
+- Data subject paths: a school admin exports everything about a child as one JSON file
+  (`GET /api/exports/student/:id`, "Export data" on the Students page; parents get the
+  same for their own child on the family page) and deletes a child with one action
+  (every table cascades from the user row).
+- Nightly database backups to object storage with 30 days kept, an owner "Back up now"
+  button, and restore steps: `docs/DEPLOY-RAILWAY.md`, section 5.
+- School branding: a school admin sets a brand colour and logo (School overview →
+  Branding); the login page shows them once the school code is typed, and the colour
+  becomes the app's accent for that school.
+
 ## Design: two worlds
 
 One family in two moods. The **adult side** (owner, school admin, teacher) keeps the

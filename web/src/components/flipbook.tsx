@@ -396,6 +396,28 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
 
   // Colouring: which pages this child has coloured, and the pad when one is open.
   const [coloured, setColoured] = useState<Set<number>>(new Set());
+  // Night mode: dim, warm pages for bedtime reading; remembered on this device.
+  const [night, setNight] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (localStorage.getItem("lp-night") === "1") setNight(true);
+      } catch {
+        /* no storage */
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const toggleNight = () => {
+    setNight((v) => {
+      try {
+        localStorage.setItem("lp-night", v ? "0" : "1");
+      } catch {
+        /* no storage */
+      }
+      return !v;
+    });
+  };
   const [colourPage, setColourPage] = useState<{ page: number; strokes: Stroke[] } | null>(null);
   const colouringUrl = useCallback((extra = "") => (colouring ? `/api/mobile/lessons/${colouring.lessonId}/colouring?fileId=${colouring.fileId}${extra}${colouring.token ? `&t=${encodeURIComponent(colouring.token)}` : ""}` : ""), [colouring]);
   useEffect(() => {
@@ -511,7 +533,7 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
     <div className="relative flex flex-col items-center gap-3">
       {colourPage && colouring && <ActivityPad key={colourPage.page} mode="colouring" page={colourPage.page} src={src} initialStrokes={colourPage.strokes} onSave={(strokes) => saveColouring(colourPage.page, strokes)} onClose={() => setColourPage(null)} />}
       {earned.length > 0 && <StickerBurst earned={earned} onDone={clearEarned} />}
-      <div className="w-full rounded-xl bg-ink-950 p-3 sm:p-6" role="region" aria-label={`${title}, book view`} aria-busy={status.kind === "opening"}>
+      <div className={`w-full rounded-xl p-3 sm:p-6 ${night ? "bg-[#0a0810]" : "bg-ink-950"}`} style={night ? { filter: "brightness(0.78) sepia(0.18)" } : undefined} role="region" aria-label={`${title}, book view`} aria-busy={status.kind === "opening"}>
         {status.kind === "opening" && (
           <div className="flex h-[60vh] flex-col items-center justify-center text-sm text-ink-200" role="status">
             <div className="mb-3 h-8 w-8 animate-spin rounded-full border-2 border-ink-500 border-t-white" />
@@ -538,6 +560,9 @@ export function Flipbook({ src, title, watermark, track, onProgress, followPage,
                 🖍️ Colour{total > 1 && !isPortrait && current !== 0 && current < total - 1 ? ` p.${p}` : ""}
               </button>
             ))}
+          <button type="button" onClick={toggleNight} aria-pressed={night} className={`ml-2 rounded-full px-3.5 py-1.5 font-semibold ${night ? "bg-ink-900 text-white" : "border border-ink-200 bg-white hover:bg-ink-100"}`} title="Dim the pages for bedtime reading">
+            {night ? "☀️ Day" : "🌙 Night"}
+          </button>
           {narration && narration.pages.length > 0 && (
             <button
               type="button"

@@ -5,7 +5,8 @@ import { copyFile, mkdir, readFile, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { readdir } from "node:fs/promises";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Upload } from "@aws-sdk/lib-storage";
 
@@ -88,6 +89,37 @@ export async function deleteObject(key: string) {
     await s3Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
   } else {
     await unlink(path.join(uploadDir, key)).catch(() => {});
+  }
+}
+
+/** Objects under a prefix (key, size, last modified). Local: files under UPLOAD_DIR/prefix. */
+export async function listObjects(prefix: string): Promise<{ key: string; size: number; lastModified: Date }[]> {
+  if (driver === "s3") {
+    const out: { key: string; size: number; lastModified: Date }[] = [];
+    let token: string | undefined;
+    do {
+      const r = await s3Client().send(new ListObjectsV2Command({ Bucket: bucket(), Prefix: prefix, ContinuationToken: token }));
+      for (const o of r.Contents ?? []) if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, lastModified: o.LastModified ?? new Date(0) });
+      token = r.IsTruncated ? r.NextContinuationToken : undefined;
+    } while (token);
+    return out;
+  }
+  const dir = path.join(uploadDir, prefix);
+  try {
+    const names = await readdir(dir);
+    const rows = await Promise.all(names.map(async (n) => ({ key: prefix + n, ...(await stat(path.join(dir, n)).then((s) => ({ size: s.size, lastModified: s.mtime }))) })));
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteObjects(keys: string[]) {
+  if (!keys.length) return;
+  if (driver === "s3") {
+    for (let i = 0; i < keys.length; i += 1000) await s3Client().send(new DeleteObjectsCommand({ Bucket: bucket(), Delete: { Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })) } }));
+  } else {
+    await Promise.all(keys.map((k) => unlink(path.join(uploadDir, k)).catch(() => {})));
   }
 }
 

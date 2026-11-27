@@ -36,6 +36,8 @@ RUN printf "{\"name\":\"tools\",\"private\":true,\"type\":\"commonjs\"}" > packa
 
 # ---- runtime ----
 FROM base AS runner
+# pg_dump for nightly backups (a newer client dumps older servers fine).
+RUN apk add --no-cache postgresql17-client || apk add --no-cache postgresql16-client
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
@@ -45,6 +47,7 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/content ./content
 # Prisma schema + migrations + seed, and a self-contained tool install under /app/tools
 COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=tooling --chown=nextjs:nodejs /app/node_modules ./tools/node_modules

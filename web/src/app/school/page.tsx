@@ -3,7 +3,9 @@ import { requireSchoolRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, Empty, LinkButton, PageHeader, Stat, Table, Td } from "@/components/ui";
 import { InlineAction } from "@/components/forms";
-import { setStudentRankVisibility } from "./actions";
+import { removeLogo, setStudentRankVisibility, updateBranding } from "./actions";
+import { ActionForm } from "@/components/forms";
+import { Field, Input } from "@/components/ui";
 
 export default async function SchoolHome() {
   const { schoolId } = await requireSchoolRole("SCHOOL_ADMIN");
@@ -92,6 +94,34 @@ export default async function SchoolHome() {
             </div>
             <InlineAction action={setStudentRankVisibility} hidden={{ show: school.showStudentRank ? "no" : "yes" }} label={school.showStudentRank ? "Hide rank" : "Show rank"} variant="secondary" />
           </div>
+        </Card>
+
+        <Card title="Branding" description="Your colour and logo on the login page (once the school code is typed) and as the accent colour inside the app for your staff, students and parents.">
+          <div className="mb-4 flex items-center gap-3">
+            {school.logoKey ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/brand/${school.code}/logo?v=${encodeURIComponent(school.logoKey)}`} alt="School logo" className="h-12 w-12 rounded-lg border border-ink-200 object-contain" />
+            ) : (
+              <span className="grid h-12 w-12 place-items-center rounded-lg border border-dashed border-ink-300 text-xs text-ink-400">No logo</span>
+            )}
+            <span className="h-12 w-12 rounded-lg border border-ink-200" style={{ background: school.brandColor ?? "var(--accent)" }} aria-label={school.brandColor ? `Brand colour ${school.brandColor}` : "Default colour"} />
+            <div className="text-xs text-ink-500">
+              {school.brandColor ? `Colour ${school.brandColor}` : "Default colour"}
+              {school.logoKey && (
+                <div>
+                  <InlineAction action={removeLogo} label="Remove logo" />
+                </div>
+              )}
+            </div>
+          </div>
+          <ActionForm action={updateBranding} submitLabel="Save branding" className="space-y-3">
+            <Field label="Brand colour" hint="A hex value such as #0F8B8D">
+              <Input name="brandColor" type="color" defaultValue={school.brandColor ?? "#0f8b8d"} className="h-11 p-1" />
+            </Field>
+            <Field label="Logo" hint="PNG, JPG, SVG or WebP, under 512 KB; square works best">
+              <Input name="logo" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="file:mr-3 file:rounded-full file:border-0 file:bg-ink-100 file:px-3 file:py-1 file:text-sm file:font-semibold" />
+            </Field>
+          </ActionForm>
         </Card>
       </div>
     </>

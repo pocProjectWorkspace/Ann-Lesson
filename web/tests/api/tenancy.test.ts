@@ -221,6 +221,26 @@ describe("tenant isolation", () => {
     expect((await api(`/api/mobile/lessons/${greenwoodLesson.id}/colouring`, { method: "POST", token: gStudent, body: JSON.stringify({ fileId, page: 3, strokes: [] }) })).status).toBe(200);
     expect((await api<{ pages: { page: number }[] }>(`/api/mobile/lessons/${greenwoodLesson.id}/colouring?fileId=${fileId}`, { token: gStudent })).data!.pages.some((p) => p.page === 3)).toBe(false);
   });
+  it("pilot pack: legal pages are public, a child's data exports for the school admin and parent only, login options carry branding", async () => {
+    expect((await api("/legal/privacy")).status).toBe(200);
+    expect((await api("/legal/terms")).text).toContain("Terms of service");
+    expect((await api("/legal/nope")).status).toBe(404);
+    const parent = (await login(users.greenwoodParent.school, users.greenwoodParent.username, users.greenwoodParent.password)).token;
+    const me = (await api<{ id?: string; user?: { id: string } }>("/api/mobile/me", { token: gStudent })).data!;
+    const id = me.id ?? me.user!.id;
+    const byParent = await api<{ name: string; progress: unknown[]; readingDays: unknown[]; stickers: unknown[] }>(`/api/exports/student/${id}`, { token: parent });
+    expect(byParent.status).toBe(200);
+    expect(byParent.data!.name).toBe("Aarav Mehta");
+    expect(Array.isArray(byParent.data!.readingDays)).toBe(true);
+    expect(byParent.headers.get("content-disposition")).toContain("attachment");
+    expect((await api(`/api/exports/student/${id}`, { token: gStudent })).status).toBe(403);
+    expect((await api(`/api/exports/student/${id}`, { token: rTeacher })).status).toBe(403);
+    const opts = await api<{ name: string; brandColor: string | null; logoUrl: string | null }>("/api/auth/login-options?code=GREENWOOD");
+    expect(opts.status).toBe(200);
+    expect("brandColor" in opts.data!).toBe(true);
+    expect((await api("/api/admin/backup", { method: "POST", token: gTeacher })).status).toBe(403);
+    expect((await api("/api/admin/backup", { method: "POST", headers: { "x-backup-token": "wrong" } })).status).toBe(403);
+  });
   it("board to desk: the teacher sends a page, students draw and submit, the board sees every drawing, closing ends it", async () => {
     type Room = { state: { page: number; activity: { id: string; page: number; prompt: string | null } | null } | null; submissions: { studentId: string; done: boolean }[] };
     const fileId = greenwoodLesson.files[0].id;

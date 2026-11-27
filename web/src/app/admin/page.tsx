@@ -6,7 +6,8 @@ import { Alert, Badge, Card, Empty, Field, Input, LinkButton, PageHeader, Select
 import { SsoFields } from "@/components/sso-fields";
 import { ActionForm, InlineAction } from "@/components/forms";
 import { listParams, Pagination, SearchBox } from "@/components/list-controls";
-import { createSchool, toggleSchoolActive } from "./actions";
+import { backupNow, createSchool, toggleSchoolActive } from "./actions";
+import { listBackups } from "@/lib/backup";
 import { formatDate } from "@/lib/utils";
 import { now } from "@/lib/time";
 
@@ -24,6 +25,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const count = (s: { users: { role: string }[] }, role: string) => s.users.filter((u) => u.role === role).length;
   const totals = allSchools.reduce((a, s) => ({ students: a.students + count(s, "STUDENT"), teachers: a.teachers + count(s, "TEACHER") }), { students: 0, teachers: 0 });
   const today = now();
+  const [backups, lastBackupLog] = await Promise.all([listBackups().catch(() => []), db.auditLog.findFirst({ where: { action: { in: ["backup.run", "backup.failed"] } }, orderBy: { createdAt: "desc" } })]);
   const expiring = allSchools.filter((s) => s.planExpiresAt && s.planExpiresAt.getTime() - today.getTime() < 14 * 86_400_000).length;
 
   return (
@@ -45,6 +47,20 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <Stat label="Students" value={totals.students} />
       </div>
 
+      <div className="mt-6">
+        <Card title="Database backups" description={backups.length ? `${backups.length} kept, newest ${formatDate(backups[0].lastModified)} (${(backups[0].size / 1024 / 1024).toFixed(1)} MB). Nightly at 21:30 UTC from GitHub Actions; 30 days kept in object storage under _backups/db/.` : "No backup yet. The nightly job runs at 21:30 UTC; press Back up now to make the first one."} actions={<InlineAction action={backupNow} label="Back up now" variant="primary" />}>
+          {lastBackupLog && <p className={`text-sm ${lastBackupLog.action === "backup.failed" ? "text-rose-700" : "text-ink-600"}`}>Last run {formatDate(lastBackupLog.createdAt)}: {lastBackupLog.summary}</p>}
+          {backups.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-2 text-xs text-ink-600">
+              {backups.slice(0, 8).map((b) => (
+                <li key={b.key} className="rounded-full bg-paper px-2.5 py-1">
+                  {b.key.replace("_backups/db/", "")} · {(b.size / 1024 / 1024).toFixed(1)} MB
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_22rem]">
         <Card title={q ? `Results for "${q}"` : "All schools"} padded={false}>
           <div className="px-5 pb-4">

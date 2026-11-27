@@ -44,6 +44,9 @@ model School {
   ssoAutoProvision Boolean @default(true) // create teachers on first sign-in
   ssoStudents      Boolean @default(false) // students may also sign in with the provider (matched by email)
 
+  // Branding shown on the login page and as the accent colour inside the app.
+  brandColor String?
+  logoKey    String?
   // School preference: do students see their position in the class ranking, or only
   // their own stars? Set by the school admin on the overview page.
   showStudentRank Boolean @default(true)

@@ -1,0 +1,26 @@
+name: Nightly database backup
+
+# Asks the production app to dump its database into object storage (see
+# web/src/lib/backup.ts). The app keeps 30 days of dumps. Fails loudly if the dump
+# does not happen, so a broken backup shows up here rather than on the day it is needed.
+on:
+  schedule:
+    - cron: "30 21 * * *" # 21:30 UTC nightly, outside school hours in most regions
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run backup
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://ann-lesson-production.up.railway.app' }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_TOKEN" || { echo "BACKUP_TOKEN secret is not set"; exit 1; }
+          code=$(curl -sS -o out.json -w '%{http_code}' --max-time 600 -X POST -H "x-backup-token: $BACKUP_TOKEN" "$APP_URL/api/admin/backup")
+          cat out.json; echo
+          test "$code" = "200" || { echo "Backup request failed with HTTP $code"; exit 1; }
+          node -e 'const r=require("./out.json"); if(!r.ok||r.bytes<1024) process.exit(1); console.log(`Backup ${r.key}: ${(r.bytes/1048576).toFixed(1)} MB in ${r.ms} ms, pruned ${r.pruned}`)'

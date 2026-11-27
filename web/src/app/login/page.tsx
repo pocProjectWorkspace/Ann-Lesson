@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, homeFor } from "@/lib/auth";
 import { LoginForm } from "./login-form";
@@ -92,6 +93,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <LoginForm next={next} initialSchool={school.toUpperCase().slice(0, 20)} />
           </div>
           <p className="mt-6 text-[13px] leading-relaxed text-ink-500">Platform owner? Leave the school code blank and sign in with your email.</p>
+          <p className="mt-8 text-[12px] text-ink-400">
+            <Link href="/legal/terms" className="hover:text-ink-700">Terms</Link> · <Link href="/legal/privacy" className="hover:text-ink-700">Privacy</Link> · <Link href="/legal/security" className="hover:text-ink-700">Security</Link>
+          </p>
         </div>
       </main>
     </div>

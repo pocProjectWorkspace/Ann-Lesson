@@ -114,6 +114,19 @@ export async function updateSchoolAuth(_prev: ActionState, formData: FormData): 
   return { success: d.authMode === "FORM" ? "Sign-in set to school code and password" : `Sign-in set to ${providerLabel[d.authMode as AuthMode]}. Use Test connection before telling the school.` };
 }
 
+/** Platform owner: run a database backup now. */
+export async function backupNow() {
+  await requireRole("SUPER_ADMIN");
+  const { runBackup } = await import("@/lib/backup");
+  try {
+    const r = await runBackup();
+    await db.auditLog.create({ data: { actorName: "Platform owner", action: "backup.run", targetType: "Database", targetId: r.key, summary: `Database backup ${r.key} (${(r.bytes / 1024 / 1024).toFixed(1)} MB)` } });
+  } catch (e) {
+    await db.auditLog.create({ data: { actorName: "Platform owner", action: "backup.failed", targetType: "Database", summary: (e instanceof Error ? e.message : "Backup failed").slice(0, 300) } });
+  }
+  revalidatePath("/admin");
+}
+
 export async function toggleSchoolActive(formData: FormData) {
   const session = await requireRole("SUPER_ADMIN");
   const id = String(formData.get("id") ?? "");

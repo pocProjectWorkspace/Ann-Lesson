@@ -5,7 +5,7 @@ import { login } from "./actions";
 import { Alert, Field, Input } from "@/components/ui";
 import { SubmitButton } from "@/components/forms";
 
-type Options = { mode: "FORM" | "MICROSOFT" | "GOOGLE"; provider: string | null; name: string; studentsSso: boolean };
+type Options = { mode: "FORM" | "MICROSOFT" | "GOOGLE"; provider: string | null; name: string; studentsSso: boolean; brandColor?: string | null; logoUrl?: string | null };
 
 function ProviderMark({ provider }: { provider: string }) {
   if (provider === "Microsoft")
@@ -44,7 +44,7 @@ export function LoginForm({ next, initialSchool = "" }: { next: string; initialS
     const t = setTimeout(() => {
       fetch(`/api/auth/login-options?code=${encodeURIComponent(code)}`, { signal: ctrl.signal })
         .then((r) => (r.ok ? r.json() : null))
-        .then((o: Options | null) => setFetched({ code, options: o && o.mode !== "FORM" ? o : null }))
+        .then((o: Options | null) => setFetched({ code, options: o }))
         .catch(() => {});
     }, 350);
     return () => {
@@ -53,25 +53,43 @@ export function LoginForm({ next, initialSchool = "" }: { next: string; initialS
     };
   }, [code]);
 
-  const ssoHref = options ? `/api/auth/sso/start?school=${encodeURIComponent(code)}${next ? `&next=${encodeURIComponent(next)}` : ""}` : null;
+  const sso = options && options.mode !== "FORM" ? options : null;
+  const ssoHref = sso ? `/api/auth/sso/start?school=${encodeURIComponent(code)}${next ? `&next=${encodeURIComponent(next)}` : ""}` : null;
+  const brand = options?.brandColor ? ({ "--accent": options.brandColor, "--accent-soft": options.brandColor + "22" } as React.CSSProperties) : undefined;
 
   return (
-    <form action={action} className="space-y-4" data-role="SUPER_ADMIN">
+    <form action={action} className="space-y-4" data-role="SUPER_ADMIN" style={brand}>
+      {options && (
+        <div className="flex items-center gap-3 rounded-2xl border border-ink-200/80 bg-white px-3.5 py-2.5 shadow-card" aria-live="polite">
+          {options.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={options.logoUrl} alt="" className="h-10 w-10 rounded-lg object-contain" />
+          ) : (
+            <span aria-hidden className="grid h-10 w-10 place-items-center rounded-lg bg-accent font-display text-lg font-bold text-accent-fg">
+              {options.name.slice(0, 1)}
+            </span>
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-display text-[17px] font-bold text-ink-950">{options.name}</span>
+            <span className="block text-xs text-ink-500">Signing in to this school</span>
+          </span>
+        </div>
+      )}
       <input type="hidden" name="next" value={next} />
       {state?.error && <Alert kind="error">{state.error}</Alert>}
       <Field label="School code">
         <Input name="schoolCode" placeholder="e.g. GREENWOOD" autoCapitalize="characters" autoComplete="organization" value={schoolCode} onChange={(e) => setSchoolCode(e.target.value)} className="uppercase placeholder:normal-case" />
       </Field>
-      {options && ssoHref && (
+      {sso && ssoHref && (
         <div className="space-y-2 rounded-[var(--radius-card)] border border-ink-200/80 bg-paper/70 p-3">
           <a href={ssoHref} className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-900 shadow-card transition hover:bg-ink-100">
-            <ProviderMark provider={options.provider ?? ""} />
-            Sign in with {options.provider}
+            <ProviderMark provider={sso.provider ?? ""} />
+            Sign in with {sso.provider}
           </a>
-          <p className="text-xs text-ink-500">{options.studentsSso ? `Staff and students of ${options.name} can use the school account. The form below also works for students.` : `Teachers and admins of ${options.name} use the school account. Students sign in below with their student ID.`}</p>
+          <p className="text-xs text-ink-500">{sso.studentsSso ? `Staff and students of ${sso.name} can use the school account. The form below also works for students.` : `Teachers and admins of ${sso.name} use the school account. Students sign in below with their student ID.`}</p>
         </div>
       )}
-      <Field label={options ? "Student ID" : "Username or student ID"}>
+      <Field label={sso ? "Student ID" : "Username or student ID"}>
         <Input name="username" required autoComplete="username" defaultValue={state?.username ?? ""} />
       </Field>
       <Field label="Password">

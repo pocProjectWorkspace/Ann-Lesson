@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Session } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { unreadCount } from "@/lib/notify";
+import { db } from "@/lib/db";
 import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 const roleLabels = {
@@ -53,9 +54,9 @@ const animalFor = (name: string) => ANIMALS[[...name].reduce((a, c) => a + c.cha
  * The child world: students and parents get a warm, wide page with a small top bar and
  * no admin sidebar. Big tap targets, the child's animal avatar, the bell, sign out.
  */
-function ChildShell({ session, nav, brand, unread, children }: { session: Session; nav: NavItem[]; brand: string; unread: number; children: ReactNode }) {
+function ChildShell({ session, nav, brand, unread, children, brandStyle }: { session: Session; nav: NavItem[]; brand: string; unread: number; children: ReactNode; brandStyle?: React.CSSProperties }) {
   return (
-    <div data-role={session.role} data-world="child" className="min-h-screen bg-paper text-ink-900">
+    <div data-role={session.role} data-world="child" className="min-h-screen bg-paper text-ink-900" style={brandStyle}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink-900 focus:shadow-lift">
         Skip to content
       </a>
@@ -106,18 +107,26 @@ function ChildShell({ session, nav, brand, unread, children }: { session: Sessio
   );
 }
 
+/** Readable text colour on a brand colour. */
+function onColor(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  const l = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return l > 160 ? "#1f1a2a" : "#ffffff";
+}
+
 export async function AppShell({ session, nav, schoolName, children }: { session: Session; nav: NavItem[]; schoolName?: string | null; children: ReactNode }) {
   const brand = schoolName ?? "Lesson Plan";
-  const unread = await unreadCount(session.userId);
+  const [unread, school] = await Promise.all([unreadCount(session.userId), session.schoolId ? db.school.findUnique({ where: { id: session.schoolId }, select: { brandColor: true } }) : null]);
+  const brandStyle = school?.brandColor ? ({ "--accent": school.brandColor, "--accent-soft": school.brandColor + "22", "--accent-fg": onColor(school.brandColor) } as React.CSSProperties) : undefined;
   if (session.role === "STUDENT" || session.role === "PARENT") {
     return (
-      <ChildShell session={session} nav={nav} brand={brand} unread={unread}>
+      <ChildShell session={session} nav={nav} brand={brand} unread={unread} brandStyle={brandStyle}>
         {children}
       </ChildShell>
     );
   }
   return (
-    <div data-role={session.role} className="min-h-screen bg-paper text-ink-900 lg:flex">
+    <div data-role={session.role} className="min-h-screen bg-paper text-ink-900 lg:flex" style={brandStyle}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink-900 focus:shadow-lift">
         Skip to content
       </a>

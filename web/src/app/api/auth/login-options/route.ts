@@ -13,11 +13,11 @@ export async function GET(req: NextRequest) {
   if (hitPublic(req.headers, "login-options")) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const code = (req.nextUrl.searchParams.get("code") ?? "").trim().toUpperCase();
   if (!code) return NextResponse.json({ error: "Missing school code" }, { status: 400 });
-  const school = await db.school.findUnique({ where: { code }, select: { name: true, isActive: true, authMode: true, ssoTenant: true, ssoClientId: true, ssoClientSecret: true, ssoStudents: true } });
+  const school = await db.school.findUnique({ where: { code }, select: { name: true, isActive: true, authMode: true, ssoTenant: true, ssoClientId: true, ssoClientSecret: true, ssoStudents: true, brandColor: true, logoKey: true } });
   if (!school || !school.isActive) return NextResponse.json({ error: "School code not found" }, { status: 404 });
   const mode: AuthMode = isAuthMode(school.authMode) && ssoConfigured(school) ? school.authMode : "FORM";
   return NextResponse.json(
-    { code, name: school.name, mode, provider: mode === "FORM" ? null : providerLabel[mode], studentsSso: mode !== "FORM" && school.ssoStudents },
+    { code, name: school.name, mode, provider: mode === "FORM" ? null : providerLabel[mode], studentsSso: mode !== "FORM" && school.ssoStudents, brandColor: school.brandColor, logoUrl: school.logoKey ? `/api/brand/${encodeURIComponent(code)}/logo` : null },
     { headers: { "Cache-Control": "private, max-age=60" } },
   );
 }

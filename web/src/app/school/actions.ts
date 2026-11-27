@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, requireSchoolRole, revokeUserSessions, type Session } from "@/lib/auth";
-import { copyObject, deleteObject, makeKey } from "@/lib/storage";
+import { putObject, copyObject, deleteObject, makeKey } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import { assertWithinPlan, PlanLimitError } from "@/lib/plans";
 import { notifyLessonPublished, notifyUsers, removeNotificationsFor } from "@/lib/notify";
@@ -527,6 +527,48 @@ export async function deleteLessonFile(formData: FormData) {
   await db.lessonFile.delete({ where: { id } });
   await audit(session, { action: "lesson.file.delete", targetType: "LessonFile", targetId: id, summary: `Deleted ${file.fileName}` });
   revalidatePath(`/school/lessons/${file.lessonId}`);
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const LOGO_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/svg+xml": "svg", "image/webp": "webp" };
+
+/** School admin: brand colour and logo for the login page and the app's accent. */
+export async function updateBranding(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const color = String(formData.get("brandColor") ?? "").trim();
+  const clear = String(formData.get("clearColor") ?? "") === "1";
+  const logo = formData.get("logo");
+  const data: { brandColor?: string | null; logoKey?: string } = {};
+  if (clear) data.brandColor = null;
+  else if (color) {
+    if (!HEX.test(color)) return { error: "Colour must be a hex value like #0F8B8D" };
+    data.brandColor = color.toLowerCase();
+  }
+  if (logo instanceof File && logo.size > 0) {
+    const ext = LOGO_TYPES[logo.type];
+    if (!ext) return { error: "Logo must be a PNG, JPG, SVG or WebP image" };
+    if (logo.size > 512 * 1024) return { error: "Logo must be under 512 KB" };
+    const key = `${session.schoolId}/brand/logo-${Date.now()}.${ext}`;
+    await putObject(key, Buffer.from(await logo.arrayBuffer()), logo.type);
+    const prev = await db.school.findUnique({ where: { id: session.schoolId }, select: { logoKey: true } });
+    if (prev?.logoKey) await deleteObject(prev.logoKey).catch(() => {});
+    data.logoKey = key;
+  }
+  if (!Object.keys(data).length) return { error: "Choose a colour or a logo" };
+  await db.school.update({ where: { id: session.schoolId }, data });
+  await audit(session, { action: "school.branding", targetType: "School", targetId: session.schoolId, summary: `Updated branding${data.brandColor !== undefined ? (data.brandColor ? ` (colour ${data.brandColor})` : " (colour removed)") : ""}${data.logoKey ? " (new logo)" : ""}` });
+  revalidatePath("/school");
+  revalidatePath("/login");
+  return { success: "Branding updated. It shows on the login page once the school code is typed." };
+}
+
+export async function removeLogo() {
+  const session = await requireSchoolRole("SCHOOL_ADMIN");
+  const prev = await db.school.findUnique({ where: { id: session.schoolId }, select: { logoKey: true } });
+  if (prev?.logoKey) await deleteObject(prev.logoKey).catch(() => {});
+  await db.school.update({ where: { id: session.schoolId }, data: { logoKey: null } });
+  await audit(session, { action: "school.branding", targetType: "School", targetId: session.schoolId, summary: "Removed logo" });
+  revalidatePath("/school");
 }
 
 /** School admin preference: whether students see their class rank or only their own stars. */

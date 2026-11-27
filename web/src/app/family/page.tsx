@@ -35,6 +35,10 @@ export default async function FamilyHome() {
                   <p className="text-sm text-ink-500">
                     {c.className ?? "No class yet"}
                     {c.teachers.length ? ` · ${c.teachers.length === 1 ? "Teacher" : "Teachers"}: ${c.teachers.join(", ")}` : ""}
+                    {" · "}
+                    <a href={`/api/exports/student/${c.id}`} className="font-semibold text-ink-600 underline-offset-2 hover:underline">
+                      Download {c.firstName}&apos;s data
+                    </a>
                   </p>
                 </div>
                 <p className="text-sm">

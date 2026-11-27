@@ -114,20 +114,30 @@ first school, sign in as its admin, upload a PDF, and open it as a student
 to confirm the R2 path works end to end (the book should render; if it
 shows "could not load", check the CORS rule from step 1).
 
-## 5. Backups
+## 5. Backups and restore
 
-- Postgres: Railway → Postgres service → **Backups** tab → enable scheduled
-  backups (daily is fine). Restores are a button in the same tab.
-- Files: R2 keeps the objects; to be safe against accidental deletion turn
-  on **Object versioning** or a scheduled **Sippy/replication** to a second
-  bucket in the bucket settings.
-- A manual database dump from your machine, if ever needed:
+**Database.** The app dumps its own database with `pg_dump` (custom format, compressed)
+straight into the R2 bucket under `_backups/db/`, keeping 30 days (`BACKUP_KEEP_DAYS`).
+It runs nightly at 21:30 UTC from the GitHub Actions workflow `.github/workflows/backup.yml`,
+which calls `POST /api/admin/backup` with the `BACKUP_TOKEN` secret (set the same value as
+a Railway variable on the web service and as a GitHub Actions secret). The platform owner
+can also press **Back up now** on the owner home page and sees the list of dumps there.
+Every run writes an audit entry (`backup.run` or `backup.failed`).
 
-  ```bash
-  pg_dump --format=custom --no-owner --file=db.dump "<DATABASE_PUBLIC_URL from the Postgres service>"
-  ```
+**Books and recordings** live in R2, which has no object versioning. They are deleted
+only by an explicit admin action. If you want a second copy, run a periodic
+`aws s3 sync s3://ann-lesson s3://<other-bucket> --endpoint-url <r2 endpoint>` from
+any machine with the R2 credentials.
 
-  `web/scripts/restore.sh` restores such a dump.
+**Restore a database dump** (for example after a bad migration):
+
+1. Download the dump: `aws s3 cp s3://ann-lesson/_backups/db/db-<stamp>.dump . --endpoint-url https://<account>.r2.cloudflarestorage.com`
+2. Get the public database URL from Railway (Postgres service → Connect) and restore
+   into an empty database, or into the live one after taking a fresh dump:
+   `pg_restore --clean --if-exists --no-owner --no-privileges --dbname "<DATABASE_URL>" db-<stamp>.dump`
+3. Redeploy the web service (it runs `prisma migrate deploy` on start) and sign in.
+
+Test a restore into a scratch Postgres at least once a quarter so the day it matters is not the first time.
 
 ## 6. Custom domain (optional, recommended)
 

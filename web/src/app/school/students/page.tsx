@@ -85,7 +85,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                       <Td>{s.isActive ? <Badge tone="green">Active</Badge> : <Badge tone="red">Inactive</Badge>}</Td>
                       <Td className="whitespace-nowrap text-right">
                         <InlineAction action={toggleSchoolUserActive} hidden={{ id: s.id }} label={s.isActive ? "Deactivate" : "Activate"} />
-                        <InlineAction action={deleteSchoolUser} hidden={{ id: s.id }} label="Delete" variant="danger" confirm={`Delete student ${s.name}? This cannot be undone.`} />
+                        <a href={`/api/exports/student/${s.id}`} className="mr-1 inline-flex items-center rounded-full px-2.5 py-1.5 text-sm font-bold text-ink-700 hover:bg-ink-100" title="Everything held about this child, as one JSON file">
+                          Export data
+                        </a>
+                        <InlineAction action={deleteSchoolUser} hidden={{ id: s.id }} label="Delete" variant="danger" confirm={`Delete ${s.name} and everything about them (reading, colouring, stickers, ratings, parent links)? This cannot be undone.`} />
                       </Td>
                     </tr>
                   ))}
