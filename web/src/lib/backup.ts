@@ -43,8 +43,11 @@ export async function runBackup(): Promise<BackupResult> {
   });
   await putObjectStream(key, Readable.toWeb(counted) as ReadableStream<Uint8Array>, "application/octet-stream");
   const code = await exit;
-  if (code !== 0) throw new Error(`pg_dump exited with ${code}: ${stderr.trim().slice(0, 400)}`);
-  if (bytes < 1024) throw new Error(`pg_dump produced only ${bytes} bytes: ${stderr.trim().slice(0, 400)}`);
+  if (code !== 0 || bytes < 1024) {
+    // Never leave an empty or partial dump behind to be mistaken for a good one.
+    await deleteObjects([key]).catch(() => {});
+    throw new Error(code !== 0 ? `pg_dump exited with ${code}: ${stderr.trim().slice(0, 400)}` : `pg_dump produced only ${bytes} bytes: ${stderr.trim().slice(0, 400)}`);
+  }
 
   const cutoff = Date.now() - KEEP_DAYS * 86_400_000;
   const old = (await listObjects(BACKUP_PREFIX)).filter((o) => o.key !== key && o.lastModified.getTime() < cutoff).map((o) => o.key);
